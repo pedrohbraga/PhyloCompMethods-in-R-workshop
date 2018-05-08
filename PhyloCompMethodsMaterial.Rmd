@@ -1,0 +1,238 @@
+---
+title: "`Phylogenetic Comparative Methods` in R"
+author: "Pedro Henrique Pereira Braga"
+output:
+  rmdformats::html_clean:
+    fig_width: 9
+    fig_height: 9
+    highlight: kate
+    thumbnails: true
+    lightbox: true
+    gallery: true
+---
+
+
+```{r knitr_init, echo=FALSE, results="asis", cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print = "50")
+opts_chunk$set(echo = FALSE,
+	             cache = FALSE,
+               prompt = FALSE,
+               tidy = FALSE,
+               comment = NA,
+               message = FALSE,
+               warning = FALSE)
+opts_knit$set(width = 75)
+```
+
+# A brief introduction
+
+Theodosius Dobzhansky said in 1973 that *“nothing in biology makes sense except in the light of evolution”*. Statistical comparative phylogenetic methods are one of the ways that allow us to understand historical patterns of life within an evolutionary context. In this course, I propose to cover some of the families of comparative phylogenetic analyses of trait evolution and correlation, for both discrete and continuous data. My objective is to provide a short background in statistical and comparative phylogenetic methods, to allow participants to explore their research questions on their own.
+
+https://cran.r-project.org/web/views/Phylogenetics.html
+
+
+# Introduction to Phylogenies
+
+**Phylogenetic trees** (i.e., **evolutionary tree** or **cladogram**) are branching diagrams illustrating the evolutionary relationships among taxa. 
+
+Phylogenetic trees can be constructed based on analysis of molecular sequences, which usually consists of three distinct procedures: (i) sequence alignment; (ii) character coding; and (iii) tree building. There is a range of available options for each of these steps, with no simple objective method for choosing between them. 
+
+In this course, we will not cover the steps necessary to reconstruct phylogenies. We will thus assume that a phylogenetic relationship is already available for the taxa.
+
+## The "phylo" object in R
+
+The core of phylogenetics analyses in R is the library `ape` - an acronym that stands for **A**nalysis of **P**hylogenetics and **E**volution. You can run the following commands to install, load and call help for `ape`:
+
+```{r ape, echo=TRUE, eval=TRUE}
+# install.packages("ape")
+
+library(ape)
+
+# help(package = ape)
+```
+
+From `ape`, we depict two important *functions* to read and load trees into `R`: `read.nexus` and `read.tree`: 
+
+`read.nexus` reads NEXUS formatted trees, which hasis organized into major units known as *blocks* and usually have the following basic structure:
+
+```{}
+#NEXUS
+[!This is the data file used for my dissertation]
+BEGIN TAXA;
+    TaxLabels Scarabaeus Drosophila Aranaeus;
+END;
+
+BEGIN TREES;
+    Translate beetle Scarabaeus, fly Drosophila, spider Aranaeus;
+    Tree tree1 = ((1,2),3);
+    Tree tree2 = ((beetle,fly),spider);
+    Tree tree3 = ((Scarabaeus,Drosophila),Aranaeus);
+END;
+```
+
+`read.tree` reads Newick formatted trees, which commonly have the following format:
+
+```{}
+(Bovine:0.69395,(Hylobates:0.36079,(Pongo:0.33636,(G._Gorilla:0.17147, (P._paniscus:0.19268,H._sapiens:0.11927):0.08386):0.06124):0.15057):0.54939, Rodent:1.21460)
+```
+
+Phylogenies can also be created in R using simulations. 
+
+```{r phylo-object, echo=TRUE, eval=TRUE}
+require(phytools)
+
+sampleTree <- pbtree(n=15,nsim=1)
+
+plot(sampleTree)
+
+```
+
+
+When phylogenies are created, loaded and handled in `ape`, their objects are represented as a list of *class* `phylo`.
+
+```{r phylo-primates, echo=TRUE, eval=TRUE}
+tree.primates <- read.tree(text="((((Homo:0.21, Pongo:0.21):0.28, Macaca:0.49):0.13, 
+                           Ateles:0.62):0.38, Galago:1.00);")
+
+tree.primates
+```
+
+A class `phylo` object distributes the information of phylogenetic trees into six main components:
+
+```{r phylo-object-str, echo=TRUE, eval=TRUE}
+str(tree.primates)
+
+```
+
+Since `phylo` is a list, we can access its elements by using the `$` symbol. We can access the *matrix* `edge` by running `phylo_object$edge`, which hasthe beginning and ending node number for all the nodes and tips of a given tree. In summary, this allows us to keep track of the internal and external nodes of the tree:
+
+```{r phylo-object-edge, echo=TRUE, eval=TRUE}
+tree.primates$edge
+```
+
+The *vector* `tip.label` element contains all the labels for all tips in the tree (*i.e.* the names of your OTUs):
+
+```{r phylo-object-tiplabel, echo=TRUE, eval=TRUE}
+tree.primates$tip.label
+```
+
+We can easily rewrite the labels of a tree:
+```{r phylo-object-tiplabel-2, echo=TRUE, eval=TRUE}
+tree.primates$tip.label <- c("Homo", "Pongo", "Macaca", "Ateles", "Galago")
+```
+
+Another important element is the vector `edge.length`, which indicates the length of each edge with relation to the root or base of the tree: 
+
+```{r phylo-object-edges, echo=TRUE, eval=TRUE}
+tree.primates$edge.length
+```
+
+Finally, `Nnode` contains the number of internal nodes in the tree:
+
+```{r phylo-object-Nnode, echo=TRUE, eval=TRUE}
+tree.primates$Nnode
+```
+
+One can see all the important information a `phylo` object carries from a tree by plotting it with all its elements:
+
+```{r phylo-object-plotting, echo=TRUE, eval=TRUE}
+plot(tree.primates, 
+     edge.width = 2, 
+     label.offset = 0.05, 
+     type = "cladogram")
+
+nodelabels()
+tiplabels()
+add.scale.bar()
+
+```
+
+There are other classes that store trees in R, such as `phylo4d` objects.
+
+## Handling and preparing phylogenies
+
+Now that we know the main characteristics of a phylogenetic tree and of a `phylo` object, let's dive into more details about phylogenetic trees.
+
+### Dicotomous and polytomous trees
+
+While some phylogenetic analyses are able to handle polytomies (i.e. more than two OTUs originating from the same node in a tree; or an unresolved clade), one may be interesting in solving the polytomies to produce a binary tree.
+
+
+```{r polytomy, echo=TRUE, eval=TRUE}
+t1 <- read.tree(text = "((A,B,C),D);") 
+# See how A, B and C are within the same round brackets, 
+# i.e. departing from the same node.
+
+plot(t1, type = "cladogram")
+```
+
+One may check if a tree is binary by using `is.binary.tree` function and - in case it is `FALSE` -, resolve randomly resolve the polytomy using the `multi2d` function:
+
+```{r is-binary, echo=TRUE, eval=TRUE}
+is.binary.tree (t1)
+```
+
+```{r multi2di-tree, echo=TRUE, eval=TRUE}
+t2 <- multi2di(t1)
+
+plot(t2, type = "cladogram")
+```
+
+### Ultrametric and non-ultrametric trees
+
+*Ultrametric trees* (or approximates of them) can be used to infer both braching and temporal patterns of evolutionary history for a given clade. For a tree to be ultrametric, its matrix has to follow the following strong assumptions:
+
+1. Each tip has to be uniquely labelled;
+2. Each internal node of the tree diverges towards at least two "children", i.e. is dicotomous;
+3. Along any path from the root to a tip (or leaf), the numbers labelling internal nodes strictly decrease, i.e. time must strictly increase along the path from the root;
+4. The distance from the root to all tips of the tree is constant for all clades.
+
+In many ultrametric trees, one can assume that all extant species are sampled at the present time, and branch lengths represent time calibrated in millions of years.
+
+This information is obtained when we infer plausible history from data that reflects time since divergence (i.e. reconstruct evolutionary history based on the *molecular clock theory*).
+
+When a tree violates one of the above assumptions (especially, number 4), a tree is then considered to be *non-ultrametric*. For instance, a non-ultrametric tree will have branches with different distances towards the tips. While this information reflects different rates of evolution across the phylogeny, many analyses will require an ultrametric tree (i.e. where models assume constant variance and equal means at the tips).
+
+In these cases, one may be interested in "smoothing out" these differences across the evolutionary history to transform a non-ultrametric tree into a ultrametric tree. 
+
+One method is to use the *mean path length* (MPL) that assumes random mutation and a fixed molecular clock to calculate the age of a node as the mean of all the distances from this node to all tips diverging from it. To run this, we use the `ape` function `chronoMPL`. MPL sometimes returns negative branch lengths, meaning that it should be used with caution.
+
+Another function we can use is `chronos`, also from the `ape` package. `chronos` uses the penalized maximum likelihood method to estimate divergences times. 
+
+Let's try these methods by first creating a random tree, then tansforming its edge lengths using both `chronoMPL` and `chronos` functions, and plotting them side-by-side:
+
+```{r ultrametric-transformation, eval=TRUE, echo=TRUE, fig.height=9, fig.width=27, message=TRUE}
+tree.NonUlt <- rtree(7)
+tree.Ult.MPL <- chronoMPL(tree.NonUlt)
+tree.Ult.S <- chronos(tree.NonUlt)
+
+par(mfrow=c(1,3))
+plot(tree.NonUlt, edge.width = 2,
+     cex = 2,
+     main = "A) Non-ultrametric",
+     cex.main = 2)
+
+plot(tree.Ult.MPL, edge.width = 2,
+     cex = 2,
+     main = "B) Ultrametric chronoMPL",
+     cex.main = 2)
+
+plot(tree.Ult.S, edge.width = 2,
+     cex = 2,
+     main = "C) Ultrametric chronos",
+     cex.main = 2)
+```
+
+
+
+```{r ultrametric-rate, echo=TRUE, eval=TRUE}
+tree.NonUlt <- rtree(7)
+tree.Ult.MPL <- chronoMPL(tree.NonUlt)
+```
+
+is.ultrametric(tree.NonUlt); is.ultrametric(tree.Ult.MPL)
+
