@@ -3,8 +3,6 @@ title: "`Phylogenetic Comparative Methods` in R"
 author: "Pedro Henrique Pereira Braga"
 output:
   rmdformats::html_clean:
-    fig_width: 9
-    fig_height: 9
     highlight: kate
     thumbnails: true
     lightbox: true
@@ -17,14 +15,18 @@ library(knitr)
 library(rmdformats)
 
 ## Global options
-options(max.print = "50")
+options(max.print = "75")
 opts_chunk$set(echo = FALSE,
-	             cache = FALSE,
+	             cache = TRUE,
                prompt = FALSE,
                tidy = FALSE,
                comment = NA,
                message = FALSE,
-               warning = FALSE)
+               warning = FALSE,
+               strip.white = TRUE,
+               fig.align  = 'center',
+               fig.width = 9,
+               fig.height = 9)
 opts_knit$set(width = 75)
 ```
 
@@ -182,7 +184,7 @@ t2 <- multi2di(t1)
 plot(t2, type = "cladogram")
 ```
 
-### Ultrametric and non-ultrametric trees
+### Ultrametric, non-ultrametric and uninformative trees
 
 *Ultrametric trees* (or approximates of them) can be used to infer both braching and temporal patterns of evolutionary history for a given clade. For a tree to be ultrametric, its matrix has to follow the following strong assumptions:
 
@@ -205,7 +207,7 @@ Another function we can use is `chronos`, also from the `ape` package. `chronos`
 
 Let's try these methods by first creating a random tree, then tansforming its edge lengths using both `chronoMPL` and `chronos` functions, and plotting them side-by-side:
 
-```{r ultrametric-transformation, eval=TRUE, echo=TRUE, fig.height=9, fig.width=27, message=TRUE}
+```{r ultrametric-transformation, eval=TRUE, echo=TRUE, fig.height=6, fig.width=18, fig.align='center', message=TRUE}
 tree.NonUlt <- rtree(7)
 tree.Ult.MPL <- chronoMPL(tree.NonUlt)
 tree.Ult.S <- chronos(tree.NonUlt)
@@ -227,12 +229,215 @@ plot(tree.Ult.S, edge.width = 2,
      cex.main = 2)
 ```
 
+You may verify if any tree is ultrametric using `is.ultrametric`:
 
+```{r ultrametric-test, echo=TRUE, eval=TRUE}
 
-```{r ultrametric-rate, echo=TRUE, eval=TRUE}
-tree.NonUlt <- rtree(7)
-tree.Ult.MPL <- chronoMPL(tree.NonUlt)
+is.ultrametric(tree.NonUlt); is.ultrametric(tree.Ult.MPL); is.ultrametric(tree.Ult.S)
+
 ```
 
-is.ultrametric(tree.NonUlt); is.ultrametric(tree.Ult.MPL)
+Sometimes, trees may have no branch lengths available, but only the divergence relationships. We often refer to these trees as being *non-informative* trees:
 
+```{r non-informative-tree, echo=TRUE, eval=TRUE}
+
+tree.NonInf <- rtree(7)
+tree.NonInf$edge.length <- NULL
+
+plot(tree.NonInf, edge.width = 2,
+     cex = 2,
+     main = "D) Uninformative tree",
+     cex.main = 2)
+```
+
+
+### Edge length and rate transformations
+
+Very oten, we may also be interested in altering the edge lengths of a given tree for a number of reasons. We may be interested, for example, in chaning the edge distance from molecular distances to time. Alternatively, we may want to change edge lengths to meet specific evolutionary models - let's say, we may seek to assess whether a given ecological pattern might be explained by recent evolutionary changes [i.e. resembling a Pagel's $\delta$ time-dependent model, (Pagel 1999)], by branching events (i.e., diversification rates; by changing Pagel's $\kappa$) or by the phylogenetic structure of a tree (by rescaling a tree using Pagel's $\lambda$).
+
+We can use the function `rescale` to perform changes in the branches of a phylogenetic tree.
+
+Pagel's $\delta$ time-dependent model rescales a tree by raising all node depths to an estimated power greater than 1 ($\delta$). A value greater than 1 means that recent evolution has been relatively fast; and if delta is less than 1, recent evolution has been comparatively slow.
+
+We can try the $\delta$ transformation in a random ultrametric tree:
+
+```{r rescaling-trees-delta, echo=TRUE, eval=TRUE, fig.width = 18, fig.height = 6}
+
+library(geiger)
+
+tree.Ult1 <- rcoal(25)
+tree.Ult1.Delta.01 <- rescale(tree.Ult1, model = "delta", 0.1)
+tree.Ult1.Delta.1 <- rescale(tree.Ult1, model = "delta", 1)
+tree.Ult1.Delta.10 <- rescale(tree.Ult1, model = "delta", 10)
+
+par(mfrow = c(1,3), cex.main = 2)
+
+plot(tree.Ult1.Delta.01, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("A) ", delta," = 0.1")))
+
+plot(tree.Ult1.Delta.1, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("B) ", delta," = 1")))
+
+plot(tree.Ult1.Delta.10, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("C) ", delta," = 10")))
+```
+
+*Note how $\delta$ = 1 returns the original tree, $\delta$ < 1 extends the branch lengths of the edges, and $\delta$ > 1 shortens the edge lengths of the tree.*
+
+Pagel's $\kappa$ punctuational (speciational) model of trait evolution focus on the number of speciation events between species to assess whether different rates of evolution are associated with branching events. This transformation raises all branch lengths to an estimated power. 
+
+
+```{r rescaling-trees-kappa, echo=TRUE, eval=TRUE, fig.width = 18, fig.height = 6}
+tree.Ult1.kappa.01 <- rescale(tree.Ult1, model = "kappa", 0.1)
+tree.Ult1.kappa.1 <- rescale(tree.Ult1, model = "kappa", 1)
+tree.Ult1.kappa.2 <- rescale(tree.Ult1, model = "kappa", 2)
+
+par(mfrow = c(1,3), 
+    cex.main = 2)
+
+plot(tree.Ult1.kappa.01, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("D) ", kappa," = 0.1")))
+
+plot(tree.Ult1.kappa.1, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("E) ", kappa," = 1")))
+
+plot(tree.Ult1.kappa.2, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("F) ", kappa," = 2")))
+```
+
+Finally, by rescaling a tree using Pagel's $\lambda$, one may change the structure of a phylogenetic tree to reduce the overall contribution of internal edges relative to the terminal edges of a given tree. A Pagel's $\lambda$ of closer to 0 removes such structure from the tree, making it resemble a "star" phylogeny; while the closest $\lambda$ is to 1, the more the rescaled tree resembles the original:
+
+```{r rescaling-trees-lambda, echo=TRUE, eval=TRUE, fig.width = 18, fig.height = 6}
+tree.Ult1.lambda.01 <- rescale(tree.Ult1, model = "lambda", 0.1)
+tree.Ult1.lambda.05 <- rescale(tree.Ult1, model = "lambda", 0.5)
+tree.Ult1.lambda.1 <- rescale(tree.Ult1, model = "lambda", 1)
+
+par(mfrow = c(1,3), 
+    cex.main = 2)
+
+plot(tree.Ult1.lambda.01, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("G) ", lambda," = 0.1")))
+
+plot(tree.Ult1.lambda.05, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("H) ", lambda," = 0.5")))
+
+plot(tree.Ult1.lambda.1, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("I) ", lambda," = 1")))
+```
+
+
+The above examples are our opening door to start understanding three key features of evolutionary change: the tempo (δ), mode (κ) and the phylogenetic signal (λ) of the evolution (of a trait) (Pagel, 1994, 1999).
+
+You can compare all above examples in the figure below:
+
+```{r rescaling-trees-all, echo=FALSE, fig.height=18, fig.width=18}
+
+par(mfrow = c(3,3), 
+    cex.main = 2)
+
+plot(tree.Ult1.Delta.01, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("A) ", delta," = 0.1")))
+
+plot(tree.Ult1.Delta.1, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("B) ", delta," = 1")))
+
+plot(tree.Ult1.Delta.10, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("C) ", delta," = 10")))
+
+#
+
+plot(tree.Ult1.kappa.01, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("D) ", kappa," = 0.1")))
+
+plot(tree.Ult1.kappa.1, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("E) ", kappa," = 1")))
+
+plot(tree.Ult1.kappa.2, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("F) ", kappa," = 2")))
+
+#
+
+plot(tree.Ult1.lambda.01, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("G) ", lambda," = 0.1")))
+
+plot(tree.Ult1.lambda.05, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("H) ", lambda," = 0.5")))
+
+plot(tree.Ult1.lambda.1, 
+     show.tip.label = FALSE,
+     edge.width = 2,
+     cex = 2,
+     main = expression(paste("I) ", lambda," = 1")))
+```
+
+### Exercises
+
+
+
+
+# Community Phylogenetic Patterns
+
+Here is an histogram.
+
+
+And a wonderful scatterplot, with a caption.
+
+
+# Trait Evolution Patterns
+
+And finally, an incredibly complex equation :
+
+$$ y = \sqrt{\frac{1}{x}} $$
+
+# Diversification Patterns
