@@ -35,19 +35,27 @@ opts_knit$set(width = 75)
 
 # What is this?
 
-This is a short course/tutorial I developed to help researchers cover some of the families of comparative phylogenetic analyses of trait evolution and correlation, for both discrete and continuous data. My objective is to provide a short background in statistical and comparative phylogenetic methods, to further allow researchers to explore their research questions on their own.
+This is a short course/tutorial I developed to help researchers cover some of the families of phylogenetic comparative analyses of trait evolution and correlation, diversification rates, as well as community structure. My objective is to provide a short background in statistical and comparative phylogenetic methods, to further allow researchers to explore their research questions on their own.
 
-Statistical comparative phylogenetic methods are one of the ways that allow us to understand historical patterns of life within an evolutionary context. In this course, I propose to 
+A big part of the inspiration for this workshop came from the book *Phylogenies in Ecology*, by *Marc W. Cadotte* and *Jonathan Davies*, as well as from courses and workshops on ecophylogenetics taught by Dr. *Will Pearse*, Dr. *Jonathan Davies* and Dr. *Steven Kembel*. 
 
-A big part of the inspiration for this workshop came from the book **Phylogenies in Ecology**, by *Marc W. Cadotte* and *Jonathan Davies*, as well as from courses taught by Dr. *Will Pearse*, Dr. *Jonathan Davies* and Dr. *Steven Kembel* on ecophylogenetics. 
+I am progressively adding more material to this document. You can access all topics addressed here in the outline on the right side of this page.
 
-If you would like to provide feedback on this material, do not hesitate to get in touch: **ph.pereirabraga [at] gmail [dot] com**. I will highly appreciate your comments!
+If you would like to provide feedback on this material, do not hesitate to get in touch!  
+
+I will highly appreciate your comments!
+
+Kind regards,
+Pedro Henrique P. Braga
+
+**ph.pereirabraga [at] gmail [dot] com**.
+
 
 ## Preparation for this tutorial
 
 I kindly ask you to run the following code to download datasets and install and load the libraries we will use through this course:
 
-```{r dataset-download, eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r dataset-download, eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Check for needed packages, and install the missing ones
 required.libraries <- c("ape", "picante", "pez", "phytools",
                         "vegan", "adephylo", "phylobase",
