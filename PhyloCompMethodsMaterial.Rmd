@@ -48,8 +48,11 @@ I will highly appreciate your comments!
 
 Kind regards,
 
-Pedro Henrique P. Braga
+Pedro Henrique P. Braga 
+
+
 **pedrohbraga.github.io**
+
 **ph.pereirabraga [at] gmail [dot] com**.
 
 
@@ -110,8 +113,6 @@ download.file("http://binarystore.wiley.com/store/
 Since many decades we recognize that many ecolgical patterns are processes are not independent of the evolution of the lineages involved in generating these patterns.
 
 Theodosius Dobzhansky said in 1973 that *“nothing in biology makes sense except in the light of evolution”*.
-
-https://cran.r-project.org/web/views/Phylogenetics.html
 
 # A brief introduction to phylogenies
 
@@ -1237,9 +1238,147 @@ phenogram(tree, x, spread.labels = TRUE, spread.cost = c(1, 0))
 
 The **Ornstein-Uhlenbeck (OU) evolutionary model** is based on stabilizing selection (Hansen, 1997; but see Butler and King 2004), where a given species trait is determined by its common ancestral state ($a$) and the strengh of the selection ($\alpha$) that attracts traits towards its optimal value ($\theta$).
 
+```{r OUsim, echo=TRUE}
+#Ornstein-Uhlenbeck (OU)
+nsim=50
+time.steps = 50
+
+ou<-matrix(ncol=nsim,nrow=time.steps)
+ou[1,]<-0
+
+alpha=-0.05
+
+for(i in 2:time.steps){
+    ou[i,] = ou[i-1,] + alpha*(ou[i-1,]) + rnorm(nsim, mean=0, sd=1) 
+}
+
+plot(1:time.steps, ou[,1],
+     xlim=c(0,time.steps),
+     ylim=c(-max(abs(ou)),
+            max(abs(ou))),
+     type="n",
+     xlab="Time", ylab="Trait value",
+     bty="n")
+
+matlines(1:time.steps,
+         ou,
+         lty=1,
+         col="#FF303080", 
+         lwd=2)
+
+```
+
+
+We can again use `rescale` on a tree to see how it stretches to an *OU* model:
+
+```{r echo=TRUE}
+tree <- rcoal(10)
+
+par1 <- par(mfrow = c(1, 2))
+
+plot(tree)
+
+tree_scaled <- rescale(tree, model = "OU")
+plot(tree_scaled(2))
+par(par1)
+```
+
 ### Early-burst model
 
 The **early-burst evolutionary model**, also known as **ACDC model** (**accelerating-decelerating**; Blomberg et al. 2003) simulates scenarios where evolutionary rates increase and decrease exponentially through time, under the model $r[t] = r[0] * exp(a * t)$, where $r[0]$ is the initial rate, $a$ is the rate change parameter, and $t$ is time. 
+
+
+```{r EBsim}
+nsim=50
+time.steps = 50
+
+#Early-Burst (aka ACDC)
+eb <- matrix(ncol= nsim, nrow=time.steps)
+eb[1,] <- 0
+
+r = -0.2
+
+for(i in 2:time.steps){
+    eb[i,] = eb[(i-1),] +  (exp(r*i)*  rnorm(nsim,mean=0,sd=1))
+    }
+
+plot(1:time.steps, eb[,1],
+     xlim=c(0, time.steps),
+     ylim=c(-max(abs(eb)),
+            max(abs(eb))),
+     type="n",
+     xlab="Time", ylab="Trait value",
+     bty="n")
+
+matlines(1:time.steps, 
+         eb,
+         lty=1,
+         col="#00BFFF70", lwd=2)
+```
+
+Finally, we can rescale a tree to see an EB model of evolution:
+
+```{r}
+par1 <- par(mfrow = c(1, 3))
+
+plot(tree)
+
+tree_scaled <- rescale(tree, model = "EB")
+plot(tree_scaled(-5))
+
+tree_scaled <- rescale(tree, model = "EB")
+plot(tree_scaled(5))
+
+par(par1)
+```
+
+
+We can see all three simulations together with this:
+
+```{r allImages, echo=FALSE}
+
+nsim=50
+time.steps = 50
+
+#Brownian Motion (BM)
+bm<-matrix(ncol=nsim,nrow=time.steps)
+bm[1,]<-0
+
+for(i in 2:time.steps){
+    bm[i,] = bm[(i-1),] + rnorm(nsim,mean=0,sd=1)    
+    }
+
+plot(1:time.steps,bm[,1],xlim=c(0,time.steps),ylim=c(-max(abs(bm)),max(abs(bm))),type="n",xlab="Time",ylab="Trait value",bty="n")
+matlines(1:time.steps,bm,lty=1,col="#70707080", lwd=2)
+
+#Ornstein-Uhlenbeck (OU)
+ou<-matrix(ncol=nsim,nrow=time.steps)
+ou[1,]<-0
+
+alpha=-0.05
+
+for(i in 2:time.steps){
+    ou[i,] = ou[i-1,] + alpha*(ou[i-1,]) + rnorm(nsim,mean=0,sd=1) 
+    }
+
+matlines(1:time.steps,ou,lty=1,col="#FF303080", lwd=2)
+
+
+#Early-Burst (aka ACDC)
+eb<-matrix(ncol=nsim,nrow=time.steps)
+eb[1,]<-0
+
+r=-.2
+
+for(i in 2:time.steps){
+    eb[i,] = eb[(i-1),] +  (exp(r*i)*  rnorm(nsim,mean=0,sd=1))
+    }
+
+matlines(1:time.steps,eb,lty=1,col="#00BFFF70", lwd=2)
+```
+
+
+
 
 ## Fitting evolutionary models to trait data
 
@@ -1247,11 +1386,11 @@ Knowing if there is phylogenetic signal in traits is nice, but it is just *knowi
 
 Here, we will use the functions `fitContinuous` from `geiger` to compare the relative fit of our data to different evolutionary models: 
 
-```{r fitContinous-BM, echo=TRUE, message=TRUE, warning=TRUE}
+```{r fitContinous, echo=TRUE, message=TRUE, warning=TRUE}
 EvoModels <- c("BM", 
                "OU", 
                "EB")
- 
+
 fitEvoModels <- lapply(EvoModels,
            FUN = function(x) fitContinuous(multi2di(Mammal.CompData$phy), 
                                            Mammal.CompData$data[, "BodyMass", drop = FALSE], 
@@ -1261,8 +1400,26 @@ fitEvoModels <- lapply(EvoModels,
 
 Let's take sometime to explore the results:
 
+```{r fitContinous-BM, echo=TRUE, message=TRUE, warning=TRUE}
+# checking the Brownian motion fit
+fitEvoModels[[1]]
 
+head(fitEvoModels[[1]]$res)
+```
 
+```{r fitContinous-EB, echo=TRUE, message=TRUE, warning=TRUE}
+# checking the Brownian motion fit
+fitEvoModels[[2]]
+
+head(fitEvoModels[[2]]$res)
+```
+
+```{r fitContinous-OU, echo=TRUE, message=TRUE, warning=TRUE}
+# checking the Brownian motion fit
+fitEvoModels[[3]]
+
+head(fitEvoModels[[3]]$res)
+```
 
 ```{r fitContinous-BM2, echo=TRUE, message=TRUE, warning=TRUE}
 AICs <- sapply(fitEvoModels, 
@@ -1278,7 +1435,7 @@ names(AICs) <- EvoModels
 
 
 
-```{r echo=TRUE}
+```{r eval=FALSE, include=FALSE}
 if (.Platform$OS.type == "windows") {
     windowsFonts(
         Impact = windowsFont("Impact"),
