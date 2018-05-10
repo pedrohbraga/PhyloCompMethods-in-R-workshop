@@ -921,7 +921,7 @@ library('fulltext')
 
 MCDB.comm <- read.csv(ft_get_si("E092-201", "MCDB_communities.csv", "esa_data_archives"))
 MCDB.species <- read.csv(ft_get_si("E092-201", "MCDB_species.csv", "esa_data_archives"))
-Mammalian.tree <- read.nexus("ele_1307_sm_sa1.tre")[[1]] # fulltext is not fetching files from Wiley
+Mammalian.tree <- read.nexus("data/ele_1307_sm_sa1.tre")[[1]] # fulltext is not fetching files from Wiley
 PanTHERIA.traits <- read.delim(ft_get_si("E090-184", "PanTHERIA_1-0_WR05_Aug2008.txt", "esa_archives"))
 ```
 
