@@ -95,6 +95,14 @@ lapply(JasperData,
          unzip(zipfile = temp, 
                files = paste("resources/data/Jasper/", x, sep = ""), 
                exdir = "data/Jasper"))
+
+# Download the tree files from this paper
+
+download.file("http://binarystore.wiley.com/store/
+              10.1111/j.1461-0248.2009.01307.x/
+              asset/supinfo/
+              ELE_1307_sm_SA1.tre?v=1&s=366b28651a9b5d1a3148ef9a8620f8aa31a7df44", 
+              destfile = "data/ele_1307_sm_sa1.tre")
 ```
 
 # Why are phylogenies important?
@@ -1094,19 +1102,31 @@ plot.phylocorrelogram(Mammal.BodyMass.MoranCor)
 
 ### Blomberg's K
 
-A common way to measure phylogenetic signal is through **Blomberg's $K$ statistic** (Blomberg et al. 2003), which compares the observed signal in a trait to its expected signal under multiple estimations under a Brownian motion model of trait evolution on a phylogeny.
+A common way to measure phylogenetic signal is through **Blomberg's K statistic** (Blomberg et al. 2003), which compares the observed signal in a trait to its expected signal under multiple estimations under a Brownian motion model of trait evolution on a phylogeny.
 
 K works as a mean square ratio (MSE), where the numerator is the error assuming that the trait evolves independently from phylogenetic structure, and the denominator is corrected by the phylogenetic covariances.
 
 
-$K$ values equal to $1$ correspond to a Brownian motion process. K values $K$ values greater than $1$ indicate strong phylogenetic signal and that traits are being conserved through the evolutionary time. Alternatively, $K$ values closer to zero correspond to a random or convergent pattern of evolution. 
+K values equal to 1 correspond to a Brownian motion process. K values K values greater than 1 indicate strong phylogenetic signal and that traits are being conserved through the evolutionary time. Alternatively, K values closer to zero correspond to a random or convergent pattern of evolution.
 
 
-```{r}
-# (K <- phylosig(tree, trait, method = "K", test = TRUE))
-
+```{r KBodyMass, echo=TRUE, message=TRUE, warning=TRUE}
+(Mammal.BodyMass.K <- phylosig(Mammal.CompData$phy, 
+               Mammal.CompData$data$BodyMass, 
+               method = "K", test = TRUE))
 ```
 
+How about other traits?
+
+```{r KHeadLengthmTempLength, echo=TRUE, message=TRUE, warning=TRUE}
+(Mammal.HeadLength.K <- phylosig(Mammal.CompData$phy, 
+               Mammal.CompData$data$HeadLength, 
+               method = "K", test = TRUE))
+
+(Mammal.mTempRange.K <- phylosig(Mammal.CompData$phy, 
+               Mammal.CompData$data$mTempRange, 
+               method = "K", test = TRUE))
+```
 
 ## Evolutionary models
 
@@ -1116,7 +1136,102 @@ For continuous traits, we commonly assume a **Brownian motion (BM) model** of ev
 
 The BM model assumes that the correlation among trait values is proportional to the extent of shared ancestry for pairs of species.
 
-BM is a model that can be easily simulated. Its most important parameter is $\sigma$.
+It is a stochastic model in which changes from one time to the next are random draws from a normal distribution with mean $0$ and variance $σ^2 × Δt$. This means that variance under BM motion increases linearly through time with instantaneous rate $σ^2$.
+
+BM is a model that can be easily simulated:
+
+```{r BMsim1, echo=TRUE, warning=TRUE}
+# From Liam Revell's tutorial
+
+t <- 0:100  # time
+sig2 <- 0.01
+
+## first, simulate a set of random deviates
+x <- rnorm(n = length(t) - 1, 
+           sd = sqrt(sig2))
+
+## now compute their cumulative sum
+x <- c(0, cumsum(x))
+plot(t, x, 
+     type = "l", 
+     ylim = c(-2, 2))
+```
+
+Now, with multiple simulations and changing $\sigma^2$:
+
+```{r BMsim2, echo=TRUE, fig.height=6, fig.width=18, warning=TRUE}
+nsim <- 100
+X <- matrix(rnorm(n = nsim * (length(t) - 1), 
+                  sd = sqrt(sig2)), 
+            nsim, 
+            length(t) - 1)
+X <- cbind(rep(0, nsim), 
+           t(apply(X, 1, cumsum)))
+
+par(mfrow = c(1,3))
+
+plot(t, X[1, ], 
+     xlab = "time", 
+     ylab = "phenotype", 
+     ylim = c(-2, 2), 
+     type = "l")
+
+apply(X[2:nsim, ], 1, 
+      function(x, t) 
+        lines(t, x), t = t)
+
+##
+
+X <- matrix(rnorm(n = nsim * (length(t) - 1), 
+                  sd = sqrt(sig2/10)), 
+            nsim, 
+            length(t) - 1)
+
+X <- cbind(rep(0, nsim), 
+           t(apply(X, 1, cumsum)))
+
+plot(t, X[1, ], 
+     xlab = "time", ylab = "phenotype", 
+     ylim = c(-2, 2), 
+     type = "l")
+
+apply(X[2:nsim, ], 1, 
+      function(x, t) lines(t, x), t = t)
+
+##
+
+nsim = 100
+
+X <- matrix(rnorm(mean = 0.02, 
+                  n = nsim * (length(t) - 1), sd = sqrt(sig2/4)), 
+    nsim, length(t) - 1)
+X <- cbind(rep(0, nsim), 
+           t(apply(X, 1, cumsum)))
+
+plot(t, X[1, ], 
+     xlab = "time", ylab = "phenotype", 
+     ylim = c(-1, 3), type = "l")
+
+apply(X[2:nsim, ], 1, 
+      function(x, t) lines(t, x), t = t)
+```
+
+If we want to think on the base of a tree:
+
+```{r phyloBM, echo=TRUE}
+library(phytools)
+
+t <- 100  # total time
+n <- 30  # total taxa
+b <- (log(n) - log(2))/t
+tree <- pbtree(b = b, n = n, t = t, type = "discrete")  
+
+## simulate Brownian evolution on a tree with fastBM
+x <- fastBM(tree, sig2 = sig2, internal = TRUE)
+## visualize Brownian evolution on a tree
+
+phenogram(tree, x, spread.labels = TRUE, spread.cost = c(1, 0))
+```
 
 ### Ornstein-Uhlenbeck model
 
@@ -1126,7 +1241,6 @@ The **Ornstein-Uhlenbeck (OU) evolutionary model** is based on stabilizing selec
 
 The **early-burst evolutionary model**, also known as **ACDC model** (**accelerating-decelerating**; Blomberg et al. 2003) simulates scenarios where evolutionary rates increase and decrease exponentially through time, under the model $r[t] = r[0] * exp(a * t)$, where $r[0]$ is the initial rate, $a$ is the rate change parameter, and $t$ is time. 
 
-
 ## Fitting evolutionary models to trait data
 
 Knowing if there is phylogenetic signal in traits is nice, but it is just *knowing*, right? Perhaps, a more informative way of assessing the phylogenetic non-independence in species traits is to properly test how traits fit to different models of trait evolution.
@@ -1134,9 +1248,47 @@ Knowing if there is phylogenetic signal in traits is nice, but it is just *knowi
 Here, we will use the functions `fitContinuous` from `geiger` to compare the relative fit of our data to different evolutionary models: 
 
 ```{r fitContinous-BM, echo=TRUE, message=TRUE, warning=TRUE}
+EvoModels <- c("BM", 
+               "OU", 
+               "EB")
+ 
+fitEvoModels <- lapply(EvoModels,
+           FUN = function(x) fitContinuous(multi2di(Mammal.CompData$phy), 
+                                           Mammal.CompData$data[, "BodyMass", drop = FALSE], 
+                                           model = x, 
+                                           ncores = 2))
+```   
 
+Let's take sometime to explore the results:
+
+
+
+
+```{r fitContinous-BM2, echo=TRUE, message=TRUE, warning=TRUE}
+AICs <- sapply(fitEvoModels, 
+               FUN = function(x) x$opt$aicc)
+
+names(AICs) <- EvoModels
+
+# Which one is the best model?
+(AICtable <- aicw(AICs))
+```   
+
+# Diversification rates
+
+
+
+```{r echo=TRUE}
+if (.Platform$OS.type == "windows") {
+    windowsFonts(
+        Impact = windowsFont("Impact"),
+        Courier = windowsFont("Courier")
+    )
+}
+
+library(meme)
+
+u <- system.file("success.jpg", package="meme")
+meme(u, "Time to eat!", "YAY!")
 ```
-
-
-# Diversification Patterns
 
