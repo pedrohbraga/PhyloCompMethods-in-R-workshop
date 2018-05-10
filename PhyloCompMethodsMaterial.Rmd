@@ -47,14 +47,16 @@ If you would like to provide feedback on this material, do not hesitate to get i
 
 I kindly ask you to run the following code to download datasets and install and load the libraries we will use through this course:
 
-```{r dataset-download, eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r dataset-download, eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Check for needed packages, and install the missing ones
 required.libraries <- c("ape", "picante", "pez", "phytools",
                         "vegan", "adephylo", "phylobase",
-                        "geiger", "hisse",
-                        "BAMMtools",
+                        "geiger", "mvMORPH", "OUwie", 
+                        "hisse", "BAMMtools",
+                        "phylosignal",
                         "devtools",
-                        "ggplot2", "fulltext")
+                        "ggplot2", 
+                        "fulltext")
 
 needed.libraries <- required.libraries[!(required.libraries %in% installed.packages()[,"Package"])]
 
@@ -493,9 +495,9 @@ In fact, many communities exhibit nonrandom patterns of evolutionary relatedness
 For this analysis, we will use the data on the Jasper Ridge plant communities available in the book "**Phylogenies in Ecology**", written by Marc Cadotte and Jonathan Davies (2016). 
 
 ```{r JasperData, echo=TRUE, eval = TRUE}
-JasperPlants.tree <- read.tree("Jasper/resources/data/Jasper/jasper_tree.phy")
+JasperPlants.tree <- read.tree("data/Jasper/resources/data/Jasper/jasper_tree.phy")
 
-JasperPlants.comm <- read.csv("Jasper/resources/data/Jasper/jasper_data.csv", 
+JasperPlants.comm <- read.csv("data/Jasper/resources/data/Jasper/jasper_data.csv", 
                    row.names = 1)
 ```
  
@@ -793,6 +795,8 @@ Baselga (2010) proposed an additive partitioning framework that consists in deco
 
 One central concept in ecophylogenetics is the non‐independence among species traits because of their phylogenetic relatedness (Felsenstein 1985; Revell, Harmon & Collar 2008).
 
+For this part of the workshop, we will use our newly acquired knowledge in the *Edge length and rate transformations* section about **Pagel's $\lambda$**, **$\kappa$** and **$\delta$**. We will also see about alternative evolutionary models and learn how to test whether **phylogenetic signal** is present in species traits, as well as, **fit traits to different models of evolution**. 
+
 ## Dataset preparation
 
 We are now introducing a third-type of data in our phylogenetic analyses: traits. Here we will use a different dataset.
@@ -883,6 +887,10 @@ Now, let's go to the *phylogenetic tree*:
 
 Mammalian.tree$tip.label <- gsub("_", " ", Mammalian.tree$tip.label)
 
+# Solve potential polytomies
+
+Mammalian.tree <- multi2di(Mammalian.tree)
+
 Mammalian.tree
 ```
 
@@ -930,9 +938,99 @@ One way to assess the existence and degree of phylogenetic non‐independence in
 
 *Phylogenetic signal* has been commonly used to investigate questions in a wide range of research areas:  How strongly are certain traits correlated with each other (Felsenstein 1985)?  Which processes drive community assembly (Webb et al. 2002)? Are niches conserved along phylogenies (Losos 2008) and is vulnerability to climate change clustered in the phylogeny (Thuiller et al. 2011)?
 
-### Continuous traits
+Let's learn about a few ways of measuring phylogenetic signal:
 
-For continuous traits, we commonly assume a Brownian motion (BM) model of evolutionary change. In this model, traits diverge independently across the evolutionary time in resemblance to a random walk (or to a *drunkard's walk*). 
+### Moran's I and Moran's Correlogram
+
+One simple way of measuring phylogenetic signal is through **Moran's I** (Gittleman and Kot, 1990; Moran, 1950), which estimates the existing autocorrelation between species and their traits as a function of their phylogenetic relatedness.
+
+Positive Moran's $I$ values indicate positive phylogenetic correlation between species; negative values indicate that closely related species are more different than distantly related species; and an $I$ of $0$ indicates absence of autocorrelation.
+
+For this, we will use `geiger`'s `Morain.I` function. See an example below:
+
+```{r MoransI, echo=TRUE}
+# We will first calculate the proximity matrix, where we 
+# can change the weight of distantly related species by changing 
+# the parameter alpha
+
+alphaI <- 1
+wI <- 1/cophenetic(Mammal.CompData$phy)^alphaI
+diag(wI) <- 0
+
+wI[1:5, 1:5]
+
+# We can then calculate Moran's I
+
+Mammal.BodyMass.I <- Moran.I(x = Mammal.CompData$data$BodyMass,
+                             weight = wI,
+                             scaled = TRUE)
+
+Mammal.BodyMass.I
+```
+
+*What is the meaning of this?*
+
+We have just calculated the global Moran's I, which allowed us to assess the existence of overall phylogenetic autocorrelation for a given trait. However, we also know that autocorrelation can change across different phylogenetic distances.
+
+We can build a **Moran's correlogram** to assess how phylogenetic autocorrelation changes across different phylogenetic distance classes.
+
+For this, we will use the functions `phyloCorrelogram` and `plot.phylocorrelogram` from `adephylo`. 
+
+```{r phyloCorrel, echo=TRUE}
+# Calculate the correlogram under a phylo4d object
+Mammal.BodyMass.MoranCor <- phyloCorrelogram(phylo4d(x = Mammal.CompData$phy, 
+                                 tip.data = Mammal.CompData$data$BodyMass), 
+                           n.points = 10, 
+                           ci.bs = 10)
+
+# Represent the correlogram
+plot.phylocorrelogram(Mammal.BodyMass.MoranCor)
+```
+
+### Blomberg's K
+
+A common way to measure phylogenetic signal is through **Blomberg's $K$ statistic** (Blomberg et al. 2003), which compares the observed signal in a trait to its expected signal under multiple estimations under a Brownian motion model of trait evolution on a phylogeny.
+
+K works as a mean square ratio (MSE), where the numerator is the error assuming that the trait evolves independently from phylogenetic structure, and the denominator is corrected by the phylogenetic covariances.
+
+
+$K$ values equal to $1$ correspond to a Brownian motion process. K values $K$ values greater than $1$ indicate strong phylogenetic signal and that traits are being conserved through the evolutionary time. Alternatively, $K$ values closer to zero correspond to a random or convergent pattern of evolution. 
+
+
+```{r}
+# (K <- phylosig(tree, trait, method = "K", test = TRUE))
+
+```
+
+
+## Evolutionary models
+
+### Brownian motion model
+
+For continuous traits, we commonly assume a **Brownian motion (BM) model** of evolutionary change. This model was proposed by Felsenstein (1985) and represents traits divergence independently across the evolutionary time, due to genetic drift (and sometimes other processes, such as natural selection), in resemblance to a random walk (or to a *drunkard's walk*).
+
+The BM model assumes that the correlation among trait values is proportional to the extent of shared ancestry for pairs of species.
+
+BM is a model that can be easily simulated. Its most important parameter is $\sigma$.
+
+### Ornstein-Uhlenbeck model
+
+The **Ornstein-Uhlenbeck (OU) evolutionary model** is based on stabilizing selection (Hansen, 1997; but see Butler and King 2004), where a given species trait is determined by its common ancestral state ($a$) and the strengh of the selection ($\alpha$) that attracts traits towards its optimal value ($\theta$).
+
+### Early-burst model
+
+The **early-burst evolutionary model**, also known as **ACDC model** (**accelerating-decelerating**; Blomberg et al. 2003) simulates scenarios where evolutionary rates increase and decrease exponentially through time, under the model $r[t] = r[0] * exp(a * t)$, where $r[0]$ is the initial rate, $a$ is the rate change parameter, and $t$ is time. 
+
+
+## Fitting evolutionary models to trait data
+
+Knowing if there is phylogenetic signal in traits is nice, but it is just *knowing*, right? Perhaps, a more informative way of assessing the phylogenetic non-independence in species traits is to properly test how traits fit to different models of trait evolution.
+
+Here, we will use the functions `fitContinuous` from `geiger` to compare the relative fit of our data to different evolutionary models: 
+
+```{r fitContinous-BM, echo=TRUE, message=TRUE, warning=TRUE}
+
+```
 
 
 # Diversification Patterns
