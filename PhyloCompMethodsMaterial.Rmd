@@ -101,10 +101,8 @@ lapply(JasperData,
 
 # Download the tree files from this paper
 
-download.file("http://binarystore.wiley.com/store/
-              10.1111/j.1461-0248.2009.01307.x/
-              asset/supinfo/
-              ELE_1307_sm_SA1.tre?v=1&s=366b28651a9b5d1a3148ef9a8620f8aa31a7df44", 
+download.file("https://onlinelibrary.wiley.com/action/
+              downloadSupplement?doi=10.1111%2Fj.1461-0248.2009.01307.x&attachmentId=179085359", 
               destfile = "data/ele_1307_sm_sa1.tre")
 ```
 
