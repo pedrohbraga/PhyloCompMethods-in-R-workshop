@@ -1,6 +1,9 @@
 ---
 title: "`Phylogenetic Comparative Methods` in R"
 author: "Pedro Henrique Pereira Braga"
+abstract: "MSc. in Ecology and Evolution; PhD Candidate at Concordia University, Montreal" 
+date: "`r Sys.Date()`"
+email: "ph.pereirabraga@gmail.com"
 output:
   rmdformats::html_clean:
     highlight: kate
@@ -30,22 +33,67 @@ opts_chunk$set(echo = FALSE,
 opts_knit$set(width = 75)
 ```
 
-# A brief introduction
+# What is this?
 
-Theodosius Dobzhansky said in 1973 that *“nothing in biology makes sense except in the light of evolution”*. Statistical comparative phylogenetic methods are one of the ways that allow us to understand historical patterns of life within an evolutionary context. In this course, I propose to cover some of the families of comparative phylogenetic analyses of trait evolution and correlation, for both discrete and continuous data. My objective is to provide a short background in statistical and comparative phylogenetic methods, to allow participants to explore their research questions on their own.
+This is a short course/tutorial I developed to help researchers cover some of the families of comparative phylogenetic analyses of trait evolution and correlation, for both discrete and continuous data. My objective is to provide a short background in statistical and comparative phylogenetic methods, to further allow researchers to explore their research questions on their own.
+
+Statistical comparative phylogenetic methods are one of the ways that allow us to understand historical patterns of life within an evolutionary context. In this course, I propose to 
+
+A big part of the inspiration for this workshop came from the book **Phylogenies in Ecology**, by *Marc W. Cadotte* and *Jonathan Davies*, as well as from courses taught by Dr. *Will Pearse*, Dr. *Jonathan Davies* and Dr. *Steven Kembel* on ecophylogenetics. 
+
+If you would like to provide feedback on this material, do not hesitate to get in touch: **ph.pereirabraga [at] gmail [dot] com**. I will highly appreciate your comments!
+
+## Preparation for this tutorial
+
+I kindly ask you to run the following code to download datasets and install and load the libraries we will use through this course:
+
+```{r dataset-download, eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Check for needed packages, and install the missing ones
+required.libraries <- c("ape", "picante", "pez", "phytools",
+                        "vegan", "adephylo", "phylobase",
+                        "geiger", "hisse",
+                        "BAMMtools",
+                        "devtools",
+                        "ggplot2", "fulltext")
+
+needed.libraries <- required.libraries[!(required.libraries %in% installed.packages()[,"Package"])]
+
+if(length(needed.libraries)) install.packages(needed.libraries)
+
+# Load all required libraries at once
+lapply(required.libraries, require, character.only = TRUE)
+
+###
+
+set.seed(1)
+
+# Download files from Marc Cadotte's and Jonathan Davies' book:
+
+temp <- tempfile()
+download.file("http://www.utsc.utoronto.ca/~mcadotte/ewExternalFiles/resources.zip", temp)
+dir.create("data/Jasper")
+JasperData <- c("jasper_tree.phy", "jasper_data.csv")
+lapply(JasperData, 
+       FUN = function(x) 
+         unzip(zipfile = temp, 
+               files = paste("resources/data/Jasper/", x, sep = ""), 
+               exdir = "data/Jasper"))
+```
+
+# Why are phylogenies important?
+Theodosius Dobzhansky said in 1973 that *“nothing in biology makes sense except in the light of evolution”*.
 
 https://cran.r-project.org/web/views/Phylogenetics.html
 
-
-# Introduction to Phylogenies
+# A brief introduction to phylogenies
 
 **Phylogenetic trees** (i.e., **evolutionary tree** or **cladogram**) are branching diagrams illustrating the evolutionary relationships among taxa. 
 
-Phylogenetic trees can be constructed based on analysis of molecular sequences, which usually consists of three distinct procedures: (i) sequence alignment; (ii) character coding; and (iii) tree building. There is a range of available options for each of these steps, with no simple objective method for choosing between them. 
+Phylogenetic trees can be constructed based on species’ genes and/or on traits. Phylogenetic reconstruction through analyses of molecular sequences usually consists of three distinct procedures: (i) sequence alignment; (ii) character coding; and (iii) tree building. There is a range of available options for each of these steps, with no simple objective method for choosing between them. 
 
-In this course, we will not cover the steps necessary to reconstruct phylogenies. We will thus assume that a phylogenetic relationship is already available for the taxa.
+In this course, we will not cover the steps necessary to reconstruct phylogenies. We will thus assume that a phylogenetic relationship is already available for the taxa of interest.
 
-## The "phylo" object in R
+## `ape` and the `phylo` object in R
 
 The core of phylogenetics analyses in R is the library `ape` - an acronym that stands for **A**nalysis of **P**hylogenetics and **E**volution. You can run the following commands to install, load and call help for `ape`:
 
@@ -157,7 +205,7 @@ There are other classes that store trees in R, such as `phylo4d` objects.
 
 ## Handling and preparing phylogenies
 
-Now that we know the main characteristics of a phylogenetic tree and of a `phylo` object, let's dive into more details about phylogenetic trees.
+Now that we know the main characteristics of a phylogenetic tree and of a `phylo` object, let's dive into more details on the structure of phylogenetic trees.
 
 ### Dicotomous and polytomous trees
 
@@ -421,23 +469,471 @@ plot(tree.Ult1.lambda.1,
      main = expression(paste("I) ", lambda," = 1")))
 ```
 
-### Exercises
+## Representing trees and other class objects
 
+## The `picante` package
 
+One of the core packages for hypothesis testing in ecophylogenetics is `picante` (Kembel et a. 2010). `picante` mainly works with three types of objects: the phylogeny data as a `phylo` class object; the community presence-absence (binary) or abundance matrix; and a species-trait matrix.
+
+## Exercises
 
 
 # Community Phylogenetic Patterns
 
-Here is an histogram.
+Ecologists share the goal of understanding and describing the processes that create the uneven distribution patterns of species, which create the variation in abundance, identity and diversity we know today. 
+
+Among many factors that determine the presence of taxa in communities are the abiotic and biotic conditions of such communities (e.g., Diamond 1975; Westoby and Wright 2006; but see Hubbell 2001). 
+
+Since taxa that recently diverged tend to be ecologically similar (Darwin 1859; Lord et al. 1995; Wiens and Graham 2005), a direct link may exist between the evolutionary relatedness of organisms in a community, the characters they possess, and the ecological processes that determine their distribution and abundance. 
+
+In fact, many communities exhibit nonrandom patterns of evolutionary relatedness among co-occurring species (reviewed in Webb et al. 2002): a phenomenon we refer to as **phylogenetic community structure**.
+
+## Preparing data for community phylogenetic analyses
+
+For this analysis, we will use the data on the Jasper Ridge plant communities available in the book "**Phylogenies in Ecology**", written by Marc Cadotte and Jonathan Davies (2016). 
+
+```{r JasperData, echo=TRUE, eval = TRUE}
+JasperPlants.tree <- read.tree("Jasper/resources/data/Jasper/jasper_tree.phy")
+
+JasperPlants.comm <- read.csv("Jasper/resources/data/Jasper/jasper_data.csv", 
+                   row.names = 1)
+```
+ 
+Before proceeding to our analyses, we have to make sure that both the community and phylogenetic data match. For this, the names of the tips should match the species names in the dataset. This also means that species present in one dataset should not be absent in the other.
+
+(*You thought you were done preparing your dataset, eh?*)
+
+For this, we can use the function `drop.tip` from the `ape` package:
+
+```{r JasperData-cleaning1, echo=TRUE, eval = TRUE}
+JasperPlants.cleanTree <- drop.tip(phy = JasperPlants.tree, 
+                              tip = setdiff(JasperPlants.tree$tip.label,
+                                      colnames(JasperPlants.comm)))
+
+```
+
+You can also match your datasets using the function `match.phylo.comm` from `picante`, or the function `comparative.comm` from `pez`. 
+
+```{r JasperData-cleaning2, echo=TRUE, eval = TRUE}
+# Using picante
+JasperPlants.picCleanTree <- match.phylo.comm(phy = JasperPlants.tree, comm = JasperPlants.comm)$phy
+
+JasperPlants.picCleanComm <- match.phylo.comm(phy = JasperPlants.tree, comm = JasperPlants.comm)$comm
+
+# Using pez
+# JasperPlants.pezCleanComm <- comparative.comm(phy = tree.j, comm = as.matrix(comm.j))
+
+```
 
 
-And a wonderful scatterplot, with a caption.
+## Phylogenetic $\alpha$ diversity (PD)
+
+One simple way to measure evolutionary diversity within a community is through Daniel Faith's PD metric (Faith, 1992; http://goo.gl/wM08Oy).
+
+PD sums the branch lenghts of all co-occurring species in a given site, from the tips to the root of the phylogenetic tree.
+
+Higher PD values are given to communities that has more evolutionary divergent taxa and older history, while lower PD values represent assemblages that have taxa with more recent evolutionar history.
+
+Faith's PD can be implemented using the `pd` function in the `picante` package.
+
+In addition to Faith's PD, the `pd` function also returns species richness (SR).
+
+SR is the same as observed richness ($S_{obs}$) or $\alpha$ diversity. 
+
+```{r JasperData-PD, echo=TRUE, eval = TRUE}
+Jasper.PD <- pd(JasperPlants.picCleanComm, JasperPlants.picCleanTree,
+                include.root = FALSE)
+
+head(Jasper.PD) # See the first six rows of the resulting matrix
+```
 
 
-# Trait Evolution Patterns
+And how PD estimates compares with SR?
 
-And finally, an incredibly complex equation :
 
-$$ y = \sqrt{\frac{1}{x}} $$
+```{r JasperData-PD-cor, echo=TRUE, eval = TRUE}
+cor.test(Jasper.PD$PD, Jasper.PD$SR)
+
+plot(Jasper.PD$PD, 
+     Jasper.PD$SR, 
+     xlab = "Phylogenetic Diversity", ylab = "Species Richness", 
+     pch = 16)
+
+```
+
+## Randomizations and null models
+
+We are often interested in assessing whether or not observed patterns differ from null expectation. `picante` has many functions that allow us to test hypotheses under different types of *null models*:
+
+\begin{center}
+\hyphenpenalty 10000
+\exhyphenpenalty 10000
+\begin{tabular}{ m{5cm}  m{10cm} }
+  \textbf{Null Model} & \textbf{Description} \\
+  \hline \hline \\ [-1.5ex]
+  \textbf{taxa.labels} & 
+  Shuffles taxa labels across tips of phylogeny (across all taxa included in phylogeny) \\
+  \\ [-1.5ex]
+  \textbf{richness} & 
+  Randomizes community data matrix abundances within samples (maintains sample species richness) \\
+  \\ [-1.5ex]  
+  \textbf{frequency} & 
+  Randomizes community data matrix abundances within species (maintains species occurence frequency) \\
+  \\ [-1.5ex]   
+  \textbf{sample.pool} & 
+  Randomizes community data matrix by drawing species from pool of species occurring in at least one community (sample pool) with equal probability \\
+  \\ [-1.5ex]  
+    \textbf{phylogeny.pool} & 
+  Randomize community data matrix by drawing species from pool of species occurring in at least one community (sample pool) with equal probability \\
+  \\ [-1.5ex]
+  \textbf{independentswap} & 
+  Randomizes community data matrix with the independent swap algorithm (Gotelli 2000) maintaining species occurrence frequency and sample species richness \\
+  \\ [-1.5ex]
+  \textbf{trialswap} & 
+  Randomizes community data matrix with the trial-swap algorithm (Miklos \& Podani 2004) maintaining species occurrence frequency and sample species richness \\
+  \\ [-1.5ex]
+    \hline
+\end{tabular}
+\end{center}
+
+
+We will start using null models to calculate the *standardized effect size* (*ses*) of PD for each community. For this, we can use the `ses.pd` function in `picante`:
+
+```{r JasperData-SESPD, echo=TRUE, eval = TRUE}
+# This is a computationally intensive process and take some time to run
+Jasper.ses.pd <- ses.pd(samp = JasperPlants.picCleanComm, 
+                        tree = JasperPlants.picCleanTree, 
+                        runs = 1000)
+
+head(Jasper.ses.pd)
+```
+
+
+## Phylogenetic community structure
+
+One other way of looking into the phylogenetic structure of communities is to quantify at what degree closely related taxa co-occur.
+
+The basis for patterns of phylogenetic community structure can lie in a simple framework (table 1; Webb et al. 2002): when species traits responsible for their physiological tolerances are conserved, an environmental filtering that limits the range of viable ecological strategies at a given site is expected to select co-occurring species more related than expected by chance, i.e. generate a pattern known as *phylogenetic clustering*.
+
+On the other hand, competitive exclusion can limit the ecological similarity of co-occurring species, generating a pattern of *phylogenetic overdispersion* or *phylogenetic evenness*.
+
+Finally, when traits are diverging faster across the evolutionary time, the effects of habitat filtering should be weaker, producing evenly dispersed patterns of relatedness; while competition or limiting similarity is expected to produce random or clustered patterns. 
+
+If communities are assembled independently with respect to traits (e.g., Hubbell 2001), then patterns of relatedness should be resemble random expectation.
+
+Over the recent years, other processes were shown to drive phylogenetic patterns of community structure, such as, isolation, time since isolation, diversification, scale-dependent assembly and local and regional composition and richness.
+
+
+```{r}
+library(knitr)
+library(kableExtra)
+
+text_tbl <- data.frame(
+    "Assembly process"= c("Limiting similarity", 
+                          "Habitat filtering", 
+                          "Neutral assembly"),
+    "Under niche conservatism" = c("Even dispersion", 
+                                   "Clustered dispersion", 
+                                   "Random dispersion"),
+    "Under niche divergence"= c("Random or clustered dispersion",
+                                "Even dispersion",
+                                "Random dispersion"))
+
+kable(text_tbl, "html", align = "c") %>%
+  kable_styling(full_width = F)
+```
+
+### Phylogenetic resemblance matrix 
+
+An important step prior to the estimation of the phylogenetic structure of communities is to create a *phylogenetic resemblance matrix*, or a *phylogenetic variance-covariance matrix*. A *phylogenetic variance-covariance matrix* is nothing more than the calculated distances between taxa in a tree.
+
+In R, we commonly refer to this matrix as a matrix of *cophenetic distances among taxa* and we can use the function `cophenetic.phylo` from `picante` to calculate it:
+
+```{r CopheneticDist, echo=TRUE}
+# Create a Phylogenetic Distance Matrix {picante}
+JasperPlants.cophenDist <- cophenetic.phylo(JasperPlants.picCleanTree)
+
+
+```
+
+## Net relatedness index (NRI)
+
+One common metric to evaluate the phylogenetic structure of commmunities is the **net relatedness index** (**NRI**), which is based on the **mean phylogenetic distances** (**MPD**) calculated from the pairwise cophenetic branch lengths distances of the co-occurring taxa in each community.
+
+NRI is obtained by multiplying the *standardized effect size mean phylogenetic distances* (calculated via a null model of interest) by $-1$.
+
+Negative NRI values indicate *phylogenetic overdispersion*, *i.e.* co-occurring taxa is less closely related than expected by a given null model; while positive NRI values represent *phylogenetic clustering*, *i.e.* co-occurring taxa are more closely related than expected by a null model.
+
+In R, we will use the function `ses.mpd` from `picante` to calculate the *NRI* of our communities:
+
+```{r sesMPD, echo=TRUE}
+# Estimate Standardized Effect Size of the MPD on the cophenetic matrix 
+JasperPlants.ses.mpd <- ses.mpd(JasperPlants.picCleanComm, 
+                   JasperPlants.cophenDist, 
+                   null.model = "taxa.labels", 
+                   abundance.weighted = FALSE, 
+                   runs = 100) 
+
+head(JasperPlants.ses.mpd)
+
+# Calculate NRI
+JasperPlants.NRI <- as.matrix(-1 * 
+                                ((JasperPlants.ses.mpd[,2] - JasperPlants.ses.mpd[,3]) / JasperPlants.ses.mpd[,4]))
+rownames(JasperPlants.NRI) <- row.names(JasperPlants.ses.mpd)
+colnames(JasperPlants.NRI) <- "NRI"
+
+
+head(JasperPlants.NRI)
+
+```
+
+
+## Nearest taxon index (NTI)
+
+Another way to assess the phylogenetic structure of communities is through the calculation of the **nearest taxon index** (**NTI**). NTI differs from NRI by being based on the **mean nearest neighbour phylogenetic distance** (**MNTD**), instead of the overall mean pairwise distances (**MPD**). 
+
+MNTD is obtained by calculating the mean phylogenetic distance of each taxon of a given community to its nearest neighbour in a tree. By doing this, one can observe that NTI is more sensitive to the clustering or overdispersion patterns happening closer to the tips of a tree, while NRI represents an overall pattern of structuring across the whole phylogenetic tree.
+
+As in NRI, higher values of NRI indicate phylogenetic clustering and lower values of NRI indicate phylogenetic overdispersion.
+
+```{r sesMNTD, echo=TRUE}
+# Estimate Standardized Effect Size of the MNTD on the cophenetic matrix 
+JasperPlants.ses.mntd <- ses.mntd(JasperPlants.picCleanComm, 
+                   JasperPlants.cophenDist, 
+                   null.model = "taxa.labels", 
+                   abundance.weighted = FALSE, 
+                   runs = 100) 
+
+head(JasperPlants.ses.mntd)
+
+# Calculate NTI
+JasperPlants.NTI <- as.matrix(-1 * 
+                                ((JasperPlants.ses.mntd[,2] - JasperPlants.ses.mntd[,3]) / JasperPlants.ses.mntd[,4]))
+rownames(JasperPlants.NTI) <- row.names(JasperPlants.ses.mntd)
+colnames(JasperPlants.NTI) <- "NTI"
+
+
+head(JasperPlants.NRI)
+
+```
+
+
+
+## Phylogenetic beta diversity (PBD)
+
+One may not be interested only in the patterns of $\alpha$ diversity, but in understanding how communities are evolutionary distinct from each other, i.e. knowing the pairwise phylogenetic $\beta$ diversity.
+
+Many metrics are available to assess the phylogenetic $\beta$ diversity of communities. Here, we will do this by calculating the *PhyloSor* index, which is the phylogenetic analog of the Sørensen index (Bryant et al., 2008; Swenson, 2011; Feng et.al., 2012). *PhyloSor* can be calculated using the function `phylosor` from `picante`:
+
+```{r JasperData-PhyloSor, echo=TRUE, eval = TRUE}
+Jasper.pbd <- phylosor(samp = JasperPlants.picCleanComm, 
+                        tree = JasperPlants.picCleanTree)
+
+as.matrix(Jasper.pbd)[1:7,1:7]
+```
+
+We can go one step further and test whether the observed PBD values differ from null expectation under different *null models*. First, we will use the function `phylosor.rnd` to obtain PhyloSor values of phylogenetic beta-diversity obtained by randomization:  
+
+```{r JasperData-PhyloSorRnd, echo=TRUE, eval = TRUE}
+Jasper.pbd.rndTaxa <- phylosor.rnd(samp = JasperPlants.picCleanComm, 
+                        tree = JasperPlants.picCleanTree,
+                        cstSor = TRUE,
+                        null.model = "taxa.labels", # Pay attention to the null models!
+                        runs = 100)
+
+```
+
+And then we will create our own null model to test our hypothesis:
+
+```{r JasperData-PhyloSorSES, eval=FALSE, message=TRUE, warning=TRUE, include=FALSE}
+
+ses.phylosor <- function(obs, rand){
+  rand <- t(as.data.frame(lapply(rand, as.vector)))
+  phylosor.obs <- as.numeric(obs)
+  phylosor.mean <- apply(rand, MARGIN = 2, 
+                      FUN = mean, 
+                      na.rm = TRUE)
+  phylosor.sd <- apply(rand, 
+                    MARGIN = 2, 
+                    FUN = sd, 
+                    na.rm = TRUE)
+  phylosor.ses <- (phylosor.obs - phylosor.mean)/phylosor.sd
+  phylosor.obs.rank <- apply(X = rbind(phylosor.obs, rand), 
+                          MARGIN = 2, 
+                          FUN = rank)[1, ]
+  phylosor.obs.rank <- ifelse(is.na(phylosor.mean), NA, phylosor.obs.rank)
+  
+  data.frame(phylosor.obs, 
+             phylosor.mean, 
+             phylosor.sd, 
+             phylosor.obs.rank, 
+             phylosor.ses, 
+             phylosor.obs.p = phylosor.obs.rank/(dim(rand)[1] + 1))
+}
+
+  
+JasperPlants.ses.pbd  <- ses.phylosor(JasperPlants.picCleanComm,
+                                      JasperPlants.picCleanTree)
+
+head(JasperPlants.ses.pbd)
+
+```
+
+## Decomposing phylogenetic beta diversity
+
+Our questions about phylogenetic can become even more complex!
+
+One may also be interested in decomposing the turnover and nestedness components of beta diversity (Baselga, 2010; Leprieur et al., 2012). 
+
+Baselga (2010) proposed an additive partitioning framework that consists in decomposing the pair-wise Sørensen's dissimilarity index into two additive components accounting for (i) ‘true’ turnover of species and (ii) richness differences between nested communities. In 2012, Leprieur et al. (2012) extended Baselga's (2010) framework to decompose PhyloSor into two components accounting for ‘true’ phylogenetic turnover and phylogenetic diversity gradients, respectively.
+
+*Pause*!
+
+# Trait Evolution
+
+One central concept in ecophylogenetics is the non‐independence among species traits because of their phylogenetic relatedness (Felsenstein 1985; Revell, Harmon & Collar 2008).
+
+## Dataset preparation
+
+We are now introducing a third-type of data in our phylogenetic analyses: traits. Here we will use a different dataset.
+
+For this part of the course, we will fetch our dataset from papers using a very useful R package: `fulltext`. `fulltext` is maintained by Scott Chamberlain, Will Pearse and Katrin Leinweber, and is able to get files directly from the supplementary material of published papers, with only the DOI references!
+
+```{r willPearseFiles, echo=TRUE, message=TRUE}
+library('fulltext')
+
+MCDB.comm <- read.csv(ft_get_si("E092-201", "MCDB_communities.csv", "esa_data_archives"))
+MCDB.species <- read.csv(ft_get_si("E092-201", "MCDB_species.csv", "esa_data_archives"))
+Mammalian.tree <- read.nexus("ele_1307_sm_sa1.tre")[[1]] # fulltext is not fetching files from Wiley
+PanTHERIA.traits <- read.delim(ft_get_si("E090-184", "PanTHERIA_1-0_WR05_Aug2008.txt", "esa_archives"))
+```
+
+*What have we just done?* 
+
+In `MCDB.comm`, we have loaded 7977 records of species composition and abundance of mammalian communities (excluding bats) for 1000 sites throughout the world, which was compiled from published literature.
+
+`MCDB.species` contains 700 records that includes the name of species and their taxonomic information.
+
+This data is part of the ecological archive for the paper Katherine M. Thibault, Sarah R. Supp, Mikaelle Giffin, Ethan P. White, and S. K. Morgan Ernest. 2011. Species composition and abundance of mammalian communities. Ecology 92:2316.
+
+`Mammalian.tree` loaded the first tree described in the published paper Fritz, S. A., Bininda-Emonds, O. R. P. and Purvis, A. (2009), Geographical variation in predictors of mammalian extinction risk: big is bad, but only in the tropics. Ecology Letters 2(6):538–549. doi: 10.1111/J.1461-0248.2009.01307
+
+And, finally, `PanTHERIA.traits` contain a species-level data set of life history, ecology, and geography of extant and recently extinct mammals. The metadata for this dataset can be consulted in http://esapubs.org/archive/ecol/e090/184/metadata.htm.
+
+Now that we know about our dataset, we can explore each one of them:
+
+```{r exploreFiles, echo=TRUE, message=TRUE}
+head(MCDB.comm)
+
+head(MCDB.species)
+
+str(Mammalian.tree)
+
+str(PanTHERIA.traits)
+```
+
+Now, let's *treat* our dataset:
+
+```{r dataSetComm, echo=TRUE, message=TRUE}
+# Starting with the community file:
+# Let's make a species-site matrix
+
+MCDB.comm$Abundance <- as.numeric(as.character(MCDB.comm$Abundance))
+
+head(MCDB.comm$Abundance)
+```
+
+```{r dataSetSpecies, echo=TRUE, message=TRUE}
+# Add a new column with real species names, extracted and matched from the MCDB.species dataset
+
+MCDB.comm$Species <- with(MCDB.species, 
+                          paste(Genus, Species)[match(MCDB.comm$Species_ID, Species_ID)])
+
+# Have you seen "with" before? Click on the link below 
+# and see how this could have been done without "with". 
+# Tell us the difference!
+
+MCDB.comm$Species <- gsub("  ", " ", MCDB.comm$Species)
+
+head(MCDB.comm)
+
+```
+
+*Looking good?* It still does not look like a *species by site matrix*, right? Let's transform the sample dataset into a matrix using `picante`'s `sample2matrix` function:
+
+```{r dataSetSpecSite, echo=TRUE, message=TRUE}
+MCDB.comm <- with(MCDB.comm,
+                  as.matrix(sample2matrix(
+                    data.frame(Site_ID, # This will be our row.names
+                               as.numeric(as.character(Abundance)),
+                               Species))))
+
+# How is this looking now?
+MCDB.comm[1:6, 1:6]
+
+```
+
+Now, let's go to the *phylogenetic tree*:
+
+```{r dataSetTree, echo=TRUE, message=TRUE}
+# We have noticed that the labels of the phylogenetic tree 
+# has a different separator than the community dataset
+
+# Let's replace the "_" in the phylogenetic tree by " "
+
+Mammalian.tree$tip.label <- gsub("_", " ", Mammalian.tree$tip.label)
+
+Mammalian.tree
+```
+
+And, now, the *trait dataset*. Let's select only a few characters of interest:
+
+```{r dataSetTrait, echo=TRUE, message=TRUE, warning=TRUE}
+PanTHERIA.traits <- with(PanTHERIA.traits,
+                         data.frame(BodyMass = log10(X5.1_AdultBodyMass_g),
+                                    HeadLength = (X13.1_AdultHeadBodyLen_mm),
+                                    LatitudinalRange = (X26.4_GR_MidRangeLat_dd),
+                                    mPrecipRange = (X28.1_Precip_Mean_mm),
+                                    mTempRange = (X28.2_Temp_Mean_01degC),
+                                    HomeRange = (X22.1_HomeRange_km2),
+                                    Terrestriality = (X12.2_Terrestriality),
+                                    row.names = MSW05_Binomial))
+
+str(PanTHERIA.traits)
+```
+
+```{r dataSetTraitNaN, echo=TRUE, message=TRUE, warning=TRUE}
+# Remove "-999"" and "NaN" values
+
+PanTHERIA.traits[PanTHERIA.traits == -999] <- NA
+PanTHERIA.traits <- na.omit(PanTHERIA.traits)
+
+str(PanTHERIA.traits)
+```
+
+Now, let's assure that all datasets are matching in species number and names. This time, instead of using the `match.phylo.data` and `match.phylo.comm` functions from `picante`, we will use the `comparative.comm` from `pez`:
+
+```{r comparativeComm, echo=TRUE, message=TRUE, warning=TRUE}
+Mammal.CompData <- comparative.comm(Mammalian.tree, 
+                    MCDB.comm, 
+                    PanTHERIA.traits)
+
+Mammal.CompData <- Mammal.CompData[rowSums(comm(Mammal.CompData)) > 0, ]
+Mammal.CompData <- Mammal.CompData[,colSums(comm(Mammal.CompData)) > 0]
+
+str(Mammal.CompData)
+```
+
+## Phylogenetic signal
+
+One way to assess the existence and degree of phylogenetic non‐independence in species traits is through the calculation of the *phylogenetic signal* of a given trait. **Phylogenetic signal** can be defined as the **tendency for related species to resemble each other more than they resemble species drawn at a null or alternative evolutionary model** (Blomberg & Garland 2002). 
+
+*Phylogenetic signal* has been commonly used to investigate questions in a wide range of research areas:  How strongly are certain traits correlated with each other (Felsenstein 1985)?  Which processes drive community assembly (Webb et al. 2002)? Are niches conserved along phylogenies (Losos 2008) and is vulnerability to climate change clustered in the phylogeny (Thuiller et al. 2011)?
+
+### Continuous traits
+
+For continuous traits, we commonly assume a Brownian motion (BM) model of evolutionary change. In this model, traits diverge independently across the evolutionary time in resemblance to a random walk (or to a *drunkard's walk*). 
+
 
 # Diversification Patterns
+
