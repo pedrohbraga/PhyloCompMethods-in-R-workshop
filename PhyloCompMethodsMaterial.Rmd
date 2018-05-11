@@ -101,21 +101,26 @@ lapply(JasperData,
 
 # Download the tree files from this paper
 
-download.file("https://onlinelibrary.wiley.com/action/downloadSupplement?doi=10.1111%2Fj.1461-0248.2009.01307.x&attachmentId=179085359", 
+download.file("https://onlinelibrary.wiley.com/action/
+downloadSupplement?doi=10.1111%2Fj.1461-0248.2009.01307.x&attachmentId=179085359", 
               destfile = "data/ele_1307_sm_sa1.tre")
 
-https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1461-0248.2009.01307.x
+# If the download of the above file does not work, 
+# download the first supplementary material from the following paper
+# and place it within your 'data' directory:
+
+# https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1461-0248.2009.01307.x
 ```
 
 # Why are phylogenies important?
 
 Since many decades we recognize that many ecolgical patterns are processes are not independent of the evolution of the lineages involved in generating these patterns.
 
-Theodosius Dobzhansky said in 1973 that *“nothing in biology makes sense except in the light of evolution”*.
+Here, we are taking it seriously what Theodosius Dobzhansky said in 1973: *“nothing in biology makes sense except in the light of evolution”*!
 
 # A brief introduction to phylogenies
 
-**Phylogenetic trees** (i.e., **evolutionary tree** or **cladogram**) are branching diagrams illustrating the evolutionary relationships among taxa. 
+**Phylogenetic trees** (*i.e.*, **evolutionary tree** or **cladogram**) are branching diagrams illustrating the evolutionary relationships among taxa. 
 
 Phylogenetic trees can be constructed based on species’ genes and/or on traits. Phylogenetic reconstruction through analyses of molecular sequences usually consists of three distinct procedures: (i) sequence alignment; (ii) character coding; and (iii) tree building. There is a range of available options for each of these steps, with no simple objective method for choosing between them. 
 
@@ -160,19 +165,7 @@ END;
 (Bovine:0.69395,(Hylobates:0.36079,(Pongo:0.33636,(G._Gorilla:0.17147, (P._paniscus:0.19268,H._sapiens:0.11927):0.08386):0.06124):0.15057):0.54939, Rodent:1.21460)
 ```
 
-Phylogenies can also be created in R using simulations. 
-
-```{r phylo-object, echo=TRUE, eval=TRUE}
-require(phytools)
-
-sampleTree <- pbtree(n=15,nsim=1)
-
-plot(sampleTree)
-
-```
-
-
-When phylogenies are created, loaded and handled in `ape`, their objects are represented as a list of *class* `phylo`.
+When phylogenies are created, loaded and handled in `ape`, their objects are represented as a list of *class* `phylo`. Let's try reading the following text string of a tree (*is it in Newick or in NEXUS format?*) and see what `R` tells us when we call it:  
 
 ```{r phylo-primates, echo=TRUE, eval=TRUE}
 tree.primates <- read.tree(text="((((Homo:0.21, Pongo:0.21):0.28, Macaca:0.49):0.13, 
@@ -185,7 +178,6 @@ A class `phylo` object distributes the information of phylogenetic trees into si
 
 ```{r phylo-object-str, echo=TRUE, eval=TRUE}
 str(tree.primates)
-
 ```
 
 Since `phylo` is a list, we can access its elements by using the `$` symbol. We can access the *matrix* `edge` by running `phylo_object$edge`, which hasthe beginning and ending node number for all the nodes and tips of a given tree. In summary, this allows us to keep track of the internal and external nodes of the tree:
@@ -200,7 +192,7 @@ The *vector* `tip.label` element contains all the labels for all tips in the tre
 tree.primates$tip.label
 ```
 
-We can easily rewrite the labels of a tree:
+There is a little error in the tip labels, right? We can easily rewrite the labels with this:
 ```{r phylo-object-tiplabel-2, echo=TRUE, eval=TRUE}
 tree.primates$tip.label <- c("Homo", "Pongo", "Macaca", "Ateles", "Galago")
 ```
@@ -228,10 +220,17 @@ plot(tree.primates,
 nodelabels()
 tiplabels()
 add.scale.bar()
-
 ```
 
-There are other classes that store trees in R, such as `phylo4d` objects.
+There are other classes that store trees in R, such as `phylo4` and `phylo4d` objects. We will talk about them later in the course.
+
+Sometimes, you may be interested in simulating trees. There are various ways of creating trees through simulations in `R`. Let's take a look at `phytools`'s `pbtree`:  
+
+```{r phylo-object, echo=TRUE, eval=TRUE}
+sampleTree <- pbtree(n = 20, nsim = 1)
+
+plot(sampleTree)
+```
 
 ## Handling and preparing phylogenies
 
@@ -239,18 +238,18 @@ Now that we know the main characteristics of a phylogenetic tree and of a `phylo
 
 ### Dicotomous and polytomous trees
 
-While some phylogenetic analyses are able to handle polytomies (i.e. more than two OTUs originating from the same node in a tree; or an unresolved clade), one may be interesting in solving the polytomies to produce a binary tree.
-
+While some phylogenetic analyses are able to handle polytomies (*i.e.* more than two OTUs originating from the same node in a tree; or an unresolved clade), one may be interesting in solving the polytomies to produce a binary tree.
 
 ```{r polytomy, echo=TRUE, eval=TRUE}
 t1 <- read.tree(text = "((A,B,C),D);") 
 # See how A, B and C are within the same round brackets, 
-# i.e. departing from the same node.
+# *i.e.* departing from the same node.
 
-plot(t1, type = "cladogram")
+plot(t1, 
+     type = "cladogram")
 ```
 
-One may check if a tree is binary by using `is.binary.tree` function and - in case it is `FALSE` -, resolve randomly resolve the polytomy using the `multi2d` function:
+One may check if a tree is binary by using `is.binary.tree` function and, in case it is `FALSE`, randomly resolve polytomies using the `multi2d` function:
 
 ```{r is-binary, echo=TRUE, eval=TRUE}
 is.binary.tree (t1)
@@ -259,7 +258,8 @@ is.binary.tree (t1)
 ```{r multi2di-tree, echo=TRUE, eval=TRUE}
 t2 <- multi2di(t1)
 
-plot(t2, type = "cladogram")
+plot(t2, 
+     type = "cladogram")
 ```
 
 ### Ultrametric, non-ultrametric and uninformative trees
@@ -267,17 +267,15 @@ plot(t2, type = "cladogram")
 *Ultrametric trees* (or approximates of them) can be used to infer both braching and temporal patterns of evolutionary history for a given clade. For a tree to be ultrametric, its matrix has to follow the following strong assumptions:
 
 1. Each tip has to be uniquely labelled;
-2. Each internal node of the tree diverges towards at least two "children", i.e. is dicotomous;
-3. Along any path from the root to a tip (or leaf), the numbers labelling internal nodes strictly decrease, i.e. time must strictly increase along the path from the root;
+2. Each internal node of the tree diverges towards at least two "children", *i.e.* is dicotomous;
+3. Along any path from the root to a tip (or leaf), the numbers labelling internal nodes strictly decrease, *i.e.* time must strictly increase along the path from the root;
 4. The distance from the root to all tips of the tree is constant for all clades.
-
-
 
 In many ultrametric trees, one can assume that all extant species are sampled at the present time, and branch lengths represent time calibrated in millions of years.
 
-This information is obtained when we infer plausible history from data that reflects time since divergence (i.e. reconstruct evolutionary history based on the *molecular clock theory*).
+This information is obtained when we infer plausible history from data that reflects time since divergence (*i.e.* reconstruct evolutionary history based on the *molecular clock theory*).
 
-When a tree violates one of the above assumptions (especially, number 4), a tree is then considered to be *non-ultrametric*. For instance, a non-ultrametric tree will have branches with different distances towards the tips. While this information reflects different rates of evolution across the phylogeny, many analyses will require an ultrametric tree (i.e. where models assume constant variance and equal means at the tips).
+When a tree violates one of the above assumptions (especially, number 4), a tree is then considered to be *non-ultrametric*. For instance, a non-ultrametric tree will have branches with different distances towards the tips. While this information reflects different rates of evolution across the phylogeny, many analyses will require an ultrametric tree (*i.e.* where models assume constant variance and equal means at the tips).
 
 In these cases, one may be interested in "smoothing out" these differences across the evolutionary history to transform a non-ultrametric tree into a ultrametric tree. 
 
@@ -312,15 +310,14 @@ plot(tree.Ult.S, edge.width = 2,
 You may verify if any tree is ultrametric using `is.ultrametric`:
 
 ```{r ultrametric-test, echo=TRUE, eval=TRUE}
-
-is.ultrametric(tree.NonUlt); is.ultrametric(tree.Ult.MPL); is.ultrametric(tree.Ult.S)
-
+is.ultrametric(tree.NonUlt) 
+is.ultrametric(tree.Ult.MPL) 
+is.ultrametric(tree.Ult.S)
 ```
 
-Sometimes, trees may have no branch lengths available, but only the divergence relationships. We often refer to these trees as being *non-informative* trees:
+Sometimes, trees may have no branch lengths available, but only the divergence relationships. We often refer to these trees as being *non-informative* trees (despite the fact that they can still give us some information about branching events):
 
 ```{r non-informative-tree, echo=TRUE, eval=TRUE}
-
 tree.NonInf <- rtree(7)
 tree.NonInf$edge.length <- NULL
 
@@ -333,7 +330,7 @@ plot(tree.NonInf, edge.width = 2,
 
 ### Edge length and rate transformations
 
-Very oten, we may also be interested in altering the edge lengths of a given tree for a number of reasons. We may be interested, for example, in chaning the edge distance from molecular distances to time. Alternatively, we may want to change edge lengths to meet specific evolutionary models - let's say, we may seek to assess whether a given ecological pattern might be explained by recent evolutionary changes [i.e. resembling a Pagel's $\delta$ time-dependent model, (Pagel 1999)], by branching events (i.e., diversification rates; by changing Pagel's $\kappa$) or by the phylogenetic structure of a tree (by rescaling a tree using Pagel's $\lambda$).
+Very oten, we may also be interested in altering the edge lengths of a given tree for a number of reasons. We may be interested, for example, in chaning the edge distance from molecular distances to time. Alternatively, we may want to change edge lengths to meet specific evolutionary models - let's say, we may seek to assess whether a given ecological pattern might be explained by recent evolutionary changes [*i.e.* resembling a Pagel's $\delta$ time-dependent model, (Pagel 1999)], by branching events (*i.e.*, diversification rates; by changing Pagel's $\kappa$) or by the phylogenetic structure of a tree (by rescaling a tree using Pagel's $\lambda$).
 
 We can use the function `rescale` to perform changes in the branches of a phylogenetic tree.
 
@@ -342,13 +339,17 @@ Pagel's $\delta$ time-dependent model rescales a tree by raising all node depths
 We can try the $\delta$ transformation in a random ultrametric tree:
 
 ```{r rescaling-trees-delta, echo=TRUE, eval=TRUE, fig.width = 18, fig.height = 6}
-
 library(geiger)
 
 tree.Ult1 <- rcoal(25)
-tree.Ult1.Delta.01 <- rescale(tree.Ult1, model = "delta", 0.1)
-tree.Ult1.Delta.1 <- rescale(tree.Ult1, model = "delta", 1)
-tree.Ult1.Delta.10 <- rescale(tree.Ult1, model = "delta", 10)
+tree.Ult1.Delta.01 <- rescale(tree.Ult1, 
+                              model = "delta", 0.1) # Setting power of 0.1
+tree.Ult1.Delta.1 <- rescale(tree.Ult1, 
+                             model = "delta", 1) # with power 1; compare this tree with the original tree
+tree.Ult1.Delta.10 <- rescale(tree.Ult1, 
+                              model = "delta", 10) # with power 10
+
+# Representing all three trees
 
 par(mfrow = c(1,3), cex.main = 2)
 
@@ -373,13 +374,18 @@ plot(tree.Ult1.Delta.10,
 
 *Note how $\delta$ = 1 returns the original tree, $\delta$ < 1 extends the branch lengths of the edges, and $\delta$ > 1 shortens the edge lengths of the tree.*
 
-Pagel's $\kappa$ punctuational (speciational) model of trait evolution focus on the number of speciation events between species to assess whether different rates of evolution are associated with branching events. This transformation raises all branch lengths to an estimated power. 
 
+Pagel's $\kappa$ punctuational (speciational) model of trait evolution focus on the number of speciation events between species to assess whether different rates of evolution are associated with branching events. This transformation raises all branch lengths to an estimated power.
 
 ```{r rescaling-trees-kappa, echo=TRUE, eval=TRUE, fig.width = 18, fig.height = 6}
-tree.Ult1.kappa.01 <- rescale(tree.Ult1, model = "kappa", 0.1)
-tree.Ult1.kappa.1 <- rescale(tree.Ult1, model = "kappa", 1)
-tree.Ult1.kappa.2 <- rescale(tree.Ult1, model = "kappa", 2)
+tree.Ult1.kappa.01 <- rescale(tree.Ult1, 
+                              model = "kappa", 0.1) # Kappa of 0.1
+tree.Ult1.kappa.1 <- rescale(tree.Ult1, 
+                             model = "kappa", 1) # Kappa of 1
+tree.Ult1.kappa.2 <- rescale(tree.Ult1, 
+                             model = "kappa", 2) # Kappa of 2
+
+# Represent these trees
 
 par(mfrow = c(1,3), 
     cex.main = 2)
@@ -403,12 +409,17 @@ plot(tree.Ult1.kappa.2,
      main = expression(paste("F) ", kappa," = 2")))
 ```
 
-Finally, by rescaling a tree using Pagel's $\lambda$, one may change the structure of a phylogenetic tree to reduce the overall contribution of internal edges relative to the terminal edges of a given tree. A Pagel's $\lambda$ of closer to 0 removes such structure from the tree, making it resemble a "star" phylogeny; while the closest $\lambda$ is to 1, the more the rescaled tree resembles the original:
+
+Finally, by rescaling a tree using Pagel's $\lambda$, one may change the structure of a phylogenetic tree to reduce the overall contribution of internal edges relative to the terminal edges of a given tree. 
+
+A Pagel's $\lambda$ of closer to 0 removes such structure from the tree, making it resemble a "star" phylogeny; while the closest $\lambda$ is to 1, the more the rescaled tree resembles the original. Let's try it:
 
 ```{r rescaling-trees-lambda, echo=TRUE, eval=TRUE, fig.width = 18, fig.height = 6}
 tree.Ult1.lambda.01 <- rescale(tree.Ult1, model = "lambda", 0.1)
 tree.Ult1.lambda.05 <- rescale(tree.Ult1, model = "lambda", 0.5)
 tree.Ult1.lambda.1 <- rescale(tree.Ult1, model = "lambda", 1)
+
+# Represent the above trees
 
 par(mfrow = c(1,3), 
     cex.main = 2)
@@ -433,14 +444,17 @@ plot(tree.Ult1.lambda.1,
 ```
 
 
-The above examples are our opening door to start understanding three key features of evolutionary change: the tempo (δ), mode (κ) and the phylogenetic signal (λ) of the evolution (of a trait) (Pagel, 1994, 1999).
+*The above examples are our opening door to start understanding three key features of evolutionary change: the tempo (δ), mode (κ) and the phylogenetic signal (λ) of the evolution (of a trait) (Pagel, 1994, 1999).*
 
-You can compare all above examples in the figure below:
+You can compare all our transformations with the figure below:
 
 ```{r rescaling-trees-all, echo=FALSE, fig.height=18, fig.width=18}
+# Set our figure facet grid
 
 par(mfrow = c(3,3), 
     cex.main = 2)
+
+# Pagel's delta
 
 plot(tree.Ult1.Delta.01, 
      show.tip.label = FALSE,
@@ -460,7 +474,7 @@ plot(tree.Ult1.Delta.10,
      cex = 2,
      main = expression(paste("C) ", delta," = 10")))
 
-#
+# Pagel's kappa
 
 plot(tree.Ult1.kappa.01, 
      show.tip.label = FALSE,
@@ -480,7 +494,7 @@ plot(tree.Ult1.kappa.2,
      cex = 2,
      main = expression(paste("F) ", kappa," = 2")))
 
-#
+# Pagel's lambda
 
 plot(tree.Ult1.lambda.01, 
      show.tip.label = FALSE,
@@ -501,9 +515,10 @@ plot(tree.Ult1.lambda.1,
      main = expression(paste("I) ", lambda," = 1")))
 ```
 
+
 ## Representing trees and other class objects
 
-There are multiple ways for *representing trees* in R.
+There are multiple ways for *representing trees* in R. You can access the help page of any R function we are using by running the function name preceeded by question mark (`?`), *e.g.* `?plot.phylo`.  
 
 ```{r representingTrees, echo=TRUE}
 treeVertebrates <- read.tree(text = "(((((((Cow, Pig), Whale), 
@@ -513,41 +528,49 @@ treeVertebrates <- read.tree(text = "(((((((Cow, Pig), Whale),
 
 par(mfrow = c(2,2))
 
+# Using the plot function, which is based on plot.phylo
 plot(treeVertebrates, no.margin = TRUE, 
      edge.width = 2)
 
+# Plotting with roundPhylogram
 roundPhylogram(treeVertebrates)
 
+# Removing the root of the tree
 plot(unroot(treeVertebrates), 
      type="unrooted", 
      no.margin = TRUE, lab4ut = "axial", 
      edge.width=2)
 
+# Posting a type fan tree
 plotTree(treeVertebrates, 
          type="fan", 
          fsize=0.7, 
          lwd=1,
     ftype="i")
-
 ```
 
-One package that allows fast visualization of phylogenetic trees is the  `ggtree` package, which is based on the popular `ggplot2` package. 
+One package that allows a fast and easily changeable visualization of phylogenetic trees is the `ggtree` package, which is based on the popular `ggplot2` package. To better work with `ggtree`, you should have a basic familiarity with the *Grammar of Graphics* and with `ggplot2`. I recommend the QCBS R Workshop material on [`ggplot2`](http://qcbs.ca/wiki/r_workshop3), which helped me acquire a general knowledge on this package.
 
-For instance, we can easily use `ggtree` to attribute colors to different taxonomic groups (in this case, *genera* of bats).
+You can access the documentation for `ggtree` [here](https://guangchuangyu.github.io/software/ggtree/).
+
+We can use `ggtree`, for example, to attribute colors to different taxonomic groups (in this case, *genera* of bats).
 
 ```{r ChiropteraTree, echo=TRUE}
 library(ggtree)
 
 data(chiroptera, package="ape")
 
+# Separate the genus names from species names
 groupInfo <- split(chiroptera$tip.label, 
                    gsub("_\\w+", "", chiroptera$tip.label))
 
 head(groupInfo)
 
+# Group species accordingly to their genera 
 chiroptera <- groupOTU(chiroptera, 
                        groupInfo)
 
+# Plot tree using ggtree
 ggtree(chiroptera, 
        aes(color = group), 
        layout='circular') + 
@@ -569,7 +592,7 @@ One of the core packages for hypothesis testing in ecophylogenetics is `picante`
 
 ## Exercises
 
-*We are short in time! :(*
+*We are short in time! I will add a few exercises here later.*
 
 # Community Phylogenetic Patterns
 
@@ -609,25 +632,24 @@ You can also match your datasets using the function `match.phylo.comm` from `pic
 
 ```{r JasperData-cleaning2, echo=TRUE, eval = TRUE}
 # Using picante
-JasperPlants.picCleanTree <- match.phylo.comm(phy = JasperPlants.tree, comm = JasperPlants.comm)$phy
+JasperPlants.picCleanTree <- match.phylo.comm(phy = JasperPlants.tree, 
+                                              comm = JasperPlants.comm)$phy
 
-JasperPlants.picCleanComm <- match.phylo.comm(phy = JasperPlants.tree, comm = JasperPlants.comm)$comm
+JasperPlants.picCleanComm <- match.phylo.comm(phy = JasperPlants.tree, 
+                                              comm = JasperPlants.comm)$comm
 
-# Using pez
-# JasperPlants.pezCleanComm <- comparative.comm(phy = tree.j, comm = as.matrix(comm.j))
+
+# Do the same using pez
+# JasperPlants.pezCleanComm <- comparative.comm(phy = JasperPlants.tree, 
+#                                               comm = as.matrix(JasperPlants.comm))
 
 ```
 
 ```{r JasperData-plotting, echo=TRUE, eval = TRUE}
-# Using picante
 plot(JasperPlants.picCleanTree,
      cex = 0.4)
 
 JasperPlants.picCleanComm[1:4, 1:4]
-
-# Using pez
-# JasperPlants.pezCleanComm <- comparative.comm(phy = JasperPlants.tree, comm = JasperPlants.comm)
-
 ```
 
 
@@ -662,7 +684,6 @@ plot(Jasper.PD$PD,
      Jasper.PD$SR, 
      xlab = "Phylogenetic Diversity", ylab = "Species Richness", 
      pch = 16)
-
 ```
 
 ## Randomizations and null models
@@ -708,7 +729,6 @@ textable <- "
 \\end{center}"
 
 tex2markdown(textable)
-
 ```
 
 
@@ -729,7 +749,7 @@ head(Jasper.ses.pd)
 
 Another way of looking into the phylogenetic structure of communities is to quantify at what degree closely related taxa co-occur.
 
-The basis for patterns of phylogenetic community structure can lie in a simple framework (table 1; Webb et al. 2002): when species traits responsible for their physiological tolerances are conserved, an environmental filtering that limits the range of viable ecological strategies at a given site is expected to select co-occurring species more related than expected by chance, i.e. generate a pattern known as *phylogenetic clustering*.
+The basis for patterns of phylogenetic community structure can lie in a simple framework (table 1; Webb et al. 2002): when species traits responsible for their physiological tolerances are conserved, an environmental filtering that limits the range of viable ecological strategies at a given site is expected to select co-occurring species more related than expected by chance, *i.e.* generate a pattern known as *phylogenetic clustering*.
 
 On the other hand, competitive exclusion can limit the ecological similarity of co-occurring species, generating a pattern of *phylogenetic overdispersion* or *phylogenetic evenness*.
 
@@ -793,13 +813,13 @@ head(JasperPlants.ses.mpd)
 
 # Calculate NRI
 JasperPlants.NRI <- as.matrix(-1 * 
-                                ((JasperPlants.ses.mpd[,2] - JasperPlants.ses.mpd[,3]) / JasperPlants.ses.mpd[,4]))
+                                ((JasperPlants.ses.mpd[,2] - JasperPlants.ses.mpd[,3]) /
+                                   JasperPlants.ses.mpd[,4]))
 rownames(JasperPlants.NRI) <- row.names(JasperPlants.ses.mpd)
 colnames(JasperPlants.NRI) <- "NRI"
 
 
 head(JasperPlants.NRI)
-
 ```
 
 
@@ -823,18 +843,18 @@ head(JasperPlants.ses.mntd)
 
 # Calculate NTI
 JasperPlants.NTI <- as.matrix(-1 * 
-                                ((JasperPlants.ses.mntd[,2] - JasperPlants.ses.mntd[,3]) / JasperPlants.ses.mntd[,4]))
+                                ((JasperPlants.ses.mntd[,2] - JasperPlants.ses.mntd[,3]) / 
+                                   JasperPlants.ses.mntd[,4]))
 rownames(JasperPlants.NTI) <- row.names(JasperPlants.ses.mntd)
 colnames(JasperPlants.NTI) <- "NTI"
 
 
-head(JasperPlants.NRI)
+head(JasperPlants.NTI)
 ```
-
 
 ## Phylogenetic beta diversity (PBD)
 
-One may not be interested only in the patterns of $\alpha$ diversity, but in understanding how communities are evolutionary distinct from each other, i.e. knowing the pairwise phylogenetic $\beta$ diversity.
+One may not be interested only in the patterns of $\alpha$ diversity, but in understanding how communities are evolutionary distinct from each other, *i.e.* knowing the pairwise phylogenetic $\beta$ diversity.
 
 Many metrics are available to assess the phylogenetic $\beta$ diversity of communities. Here, we will do this by calculating the *PhyloSor* index, which is the phylogenetic analog of the Sørensen index (Bryant et al., 2008; Swenson, 2011; Feng et.al., 2012). *PhyloSor* can be calculated using the function `phylosor` from `picante`:
 
@@ -856,24 +876,31 @@ Jasper.pbd.rndTaxa <- phylosor.rnd(samp = JasperPlants.picCleanComm,
 
 ```
 
-And then we will create our own null model to test our hypothesis:
+Apparently, the a *standardized effect size* function is not available within `picante`. Thus, we will create our own null model to test our hypothesis:
 
 ```{r JasperData-PhyloSorSES, echo=TRUE, message=TRUE, warning=TRUE, paged.print=TRUE}
+# I first ran ses.pd to build this in a more-or-less similar format
 
 ses.phylosor <- function(obs, rand){
   rand <- t(as.data.frame(lapply(rand, as.vector)))
+  
   phySor.obs <- as.numeric(obs)
+  
   phySor.mean <- apply(rand, MARGIN = 2, 
                       FUN = mean, 
                       na.rm = TRUE)
+  
   phySor.sd <- apply(rand, 
                     MARGIN = 2, 
                     FUN = sd, 
                     na.rm = TRUE)
+  
   phySor.ses <- (phySor.obs - phySor.mean)/phySor.sd
+  
   phySor.obs.rank <- apply(X = rbind(phySor.obs, rand), 
                           MARGIN = 2, 
                           FUN = rank)[1, ]
+  
   phySor.obs.rank <- ifelse(is.na(phySor.mean), NA, phySor.obs.rank)
   
   data.frame(phySor.obs, 
@@ -888,10 +915,10 @@ ses.phylosor <- function(obs, rand){
 JasperPlants.ses.pbd  <- ses.phylosor(Jasper.pbd,
                                       Jasper.pbd.rndTaxa)
 
+# Project the table using knitr::kable
 round(JasperPlants.ses.pbd[45:55,], 3) %>%
   kable("html") %>%
   kable_styling()
-
 ```
 
 ## Decomposing phylogenetic beta diversity
@@ -899,10 +926,9 @@ round(JasperPlants.ses.pbd[45:55,], 3) %>%
 Our questions about phylogenetic can become even more complex!
 
 One may also be interested in decomposing the turnover and nestedness components of beta diversity (Baselga, 2010; Leprieur et al., 2012). 
-
 Baselga (2010) proposed an additive partitioning framework that consists in decomposing the pair-wise Sørensen's dissimilarity index into two additive components accounting for (i) ‘true’ turnover of species and (ii) richness differences between nested communities. In 2012, Leprieur et al. (2012) extended Baselga's (2010) framework to decompose PhyloSor into two components accounting for ‘true’ phylogenetic turnover and phylogenetic diversity gradients, respectively.
 
-*Not covered today!*
+*Still not covered in this tutorial!*
 
 # Trait Evolution
 
@@ -917,6 +943,9 @@ We are now introducing a third-type of data in our phylogenetic analyses: traits
 For this part of the course, we will fetch our dataset from papers using a very useful R package: `fulltext`. `fulltext` is maintained by Scott Chamberlain, Will Pearse and Katrin Leinweber, and is able to get files directly from the supplementary material of published papers, with only the DOI references!
 
 ```{r willPearseFiles, echo=TRUE, message=TRUE}
+# The idea of using this dataset was borrowed from Will Pearse's minicourse on ecophylogenetics.
+# Nevertheless, we will use it for further analyses here!
+
 library('fulltext')
 
 MCDB.comm <- read.csv(ft_get_si("E092-201", "MCDB_communities.csv", "esa_data_archives"))
@@ -931,13 +960,17 @@ In `MCDB.comm`, we have loaded 7977 records of species composition and abundance
 
 `MCDB.species` contains 700 records that includes the name of species and their taxonomic information.
 
-This data is part of the ecological archive for the paper Katherine M. Thibault, Sarah R. Supp, Mikaelle Giffin, Ethan P. White, and S. K. Morgan Ernest. 2011. Species composition and abundance of mammalian communities. Ecology 92:2316.
+This data is part of the ecological archive of the paper by Thibault et al. (2011) 
 
-`Mammalian.tree` loaded the first tree described in the published paper Fritz, S. A., Bininda-Emonds, O. R. P. and Purvis, A. (2009), Geographical variation in predictors of mammalian extinction risk: big is bad, but only in the tropics. Ecology Letters 2(6):538–549. doi: 10.1111/J.1461-0248.2009.01307
+(*Katherine M. Thibault, Sarah R. Supp, Mikaelle Giffin, Ethan P. White, and S. K. Morgan Ernest. 2011. Species composition and abundance of mammalian communities. Ecology 92:2316.*)
 
-And, finally, `PanTHERIA.traits` contain a species-level data set of life history, ecology, and geography of extant and recently extinct mammals. The metadata for this dataset can be consulted in http://esapubs.org/archive/ecol/e090/184/metadata.htm.
+`Mammalian.tree` loaded the first tree described in the published paper by Fritz et al. 2009 
 
-Now that we know about our dataset, we can explore each one of them:
+(*Fritz, S. A., Bininda-Emonds, O. R. P. and Purvis, A. (2009), Geographical variation in predictors of mammalian extinction risk: big is bad, but only in the tropics. Ecology Letters 2(6):538–549. doi: 10.1111/J.1461-0248.2009.01307*)
+
+And, finally, `PanTHERIA.traits` contain a species-level data set of life history, ecology, and geography of extant and recently extinct mammals. The metadata for this dataset can be consulted in its [website](http://esapubs.org/archive/ecol/e090/184/metadata.htm).
+
+Now that we know about our dataset, we can explore each one of the loaded objects:
 
 ```{r exploreFiles, echo=TRUE, message=TRUE}
 head(MCDB.comm)
@@ -950,6 +983,8 @@ str(PanTHERIA.traits)
 ```
 
 Now, let's *treat* our dataset:
+
+(*Yes, we spend a lot of time making our dataset ready for analysis!*)
 
 ```{r dataSetComm, echo=TRUE, message=TRUE}
 # Starting with the community file:
@@ -987,7 +1022,6 @@ MCDB.comm <- with(MCDB.comm,
 
 # How is this looking now?
 MCDB.comm[1:6, 1:6]
-
 ```
 
 Now, let's go to the *phylogenetic tree*:
@@ -1032,12 +1066,15 @@ PanTHERIA.traits <- na.omit(PanTHERIA.traits)
 str(PanTHERIA.traits)
 ```
 
-Now, let's assure that all datasets are matching in species number and names. This time, instead of using the `match.phylo.data` and `match.phylo.comm` functions from `picante`, we will use the `comparative.comm` from `pez`:
+Finally, let's assure that all datasets are matching in species number and names. This time, instead of using the `match.phylo.data` and `match.phylo.comm` functions from `picante`, we will use the `comparative.comm` from `pez`:
 
 ```{r comparativeComm, echo=TRUE, message=TRUE, warning=TRUE}
 Mammal.CompData <- comparative.comm(Mammalian.tree, 
                     MCDB.comm, 
                     PanTHERIA.traits)
+
+# Also, for the moment, there is no reason to have sites 
+# that have no species recorded in them
 
 Mammal.CompData <- Mammal.CompData[rowSums(comm(Mammal.CompData)) > 0, ]
 Mammal.CompData <- Mammal.CompData[,colSums(comm(Mammal.CompData)) > 0]
@@ -1062,8 +1099,8 @@ Positive Moran's $I$ values indicate positive phylogenetic correlation between s
 For this, we will use `geiger`'s `Morain.I` function. See an example below:
 
 ```{r MoransI, echo=TRUE}
-# We will first calculate the proximity matrix, where we 
-# can change the weight of distantly related species by changing 
+# We will first calculate a proximity matrix, where we can 
+# change the weight of distantly related species by changing 
 # the parameter alpha
 
 alphaI <- 1
@@ -1083,11 +1120,11 @@ Mammal.BodyMass.I
 
 *What is the meaning of this?*
 
-We have just calculated the global Moran's I, which allowed us to assess the existence of overall phylogenetic autocorrelation for a given trait. However, we also know that autocorrelation can change across different phylogenetic distances.
+We have just calculated the **global Moran's I**, which allowed us to assess the existence of overall phylogenetic autocorrelation for a given trait. However, we also know that the degree of autocorrelation can change across different phylogenetic distances.
 
 We can build a **Moran's correlogram** to assess how phylogenetic autocorrelation changes across different phylogenetic distance classes.
 
-For this, we will use the functions `phyloCorrelogram` and `plot.phylocorrelogram` from `adephylo`. 
+For this, we will use the functions `phyloCorrelogram` and `plot.phylocorrelogram` from `adephylo`:
 
 ```{r phyloCorrel, echo=TRUE}
 # Calculate the correlogram under a phylo4d object
@@ -1100,14 +1137,16 @@ Mammal.BodyMass.MoranCor <- phyloCorrelogram(phylo4d(x = Mammal.CompData$phy,
 plot.phylocorrelogram(Mammal.BodyMass.MoranCor)
 ```
 
+*How do you interprete this correlogram?*
+
 ### Blomberg's K
 
 A common way to measure phylogenetic signal is through **Blomberg's K statistic** (Blomberg et al. 2003), which compares the observed signal in a trait to its expected signal under multiple estimations under a Brownian motion model of trait evolution on a phylogeny.
 
-K works as a mean square ratio (MSE), where the numerator is the error assuming that the trait evolves independently from phylogenetic structure, and the denominator is corrected by the phylogenetic covariances.
+*K* works as a mean square ratio (MSE), where the numerator is the error assuming that the trait evolves independently from phylogenetic structure, and the denominator is corrected by the phylogenetic covariances.
 
 
-K values equal to 1 correspond to a Brownian motion process. K values K values greater than 1 indicate strong phylogenetic signal and that traits are being conserved through the evolutionary time. Alternatively, K values closer to zero correspond to a random or convergent pattern of evolution.
+*K* values equal to 1 correspond to a Brownian motion process. *K* values greater than 1 indicate strong phylogenetic signal and that traits are being conserved through the evolutionary time. Alternatively, *K* values closer to zero correspond to a random or convergent pattern of evolution.
 
 
 ```{r KBodyMass, echo=TRUE, message=TRUE, warning=TRUE}
@@ -1128,6 +1167,8 @@ How about other traits?
                method = "K", test = TRUE))
 ```
 
+*Look at how can we interprete K in the text above the code, and tell how if there is phylogenetic signal for each one of the above traits.*
+
 ## Evolutionary models
 
 ### Brownian motion model
@@ -1141,7 +1182,9 @@ It is a stochastic model in which changes from one time to the next are random d
 BM is a model that can be easily simulated:
 
 ```{r BMsim1, echo=TRUE, warning=TRUE}
-# From Liam Revell's tutorial
+# For the moment, this is a wrapper of 
+# Liam Revell's tutorial on Brownian Motion simulation 
+# http://www.phytools.org/eqg/Exercise_4.1/
 
 t <- 0:100  # time
 sig2 <- 0.01
@@ -1161,6 +1204,7 @@ Now, with multiple simulations and changing $\sigma^2$:
 
 ```{r BMsim2, echo=TRUE, fig.height=6, fig.width=18, warning=TRUE}
 nsim <- 100
+
 X <- matrix(rnorm(n = nsim * (length(t) - 1), 
                   sd = sqrt(sig2)), 
             nsim, 
@@ -1216,11 +1260,9 @@ apply(X[2:nsim, ], 1,
       function(x, t) lines(t, x), t = t)
 ```
 
-If we want to think on the base of a tree:
+If we want to think on the perspective of a tree:
 
 ```{r phyloBM, echo=TRUE}
-library(phytools)
-
 t <- 100  # total time
 n <- 30  # total taxa
 b <- (log(n) - log(2))/t
